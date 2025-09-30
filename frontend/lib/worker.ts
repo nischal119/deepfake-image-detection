@@ -66,7 +66,12 @@ export function ensureWorkerStarted() {
             const filePath = pathFromUrl(job.filePath);
             const outFile = path.join(process.cwd(), "tmp", `${job.id}.json`);
             await fs.promises.mkdir(path.dirname(outFile), { recursive: true });
-            const args: string[] = [scriptPath, "--input", filePath];
+            const args: string[] = [
+              scriptPath,
+              "--input",
+              filePath,
+              "--explain",
+            ]; // request heatmap/artifacts
             const ckpt = process.env.MODEL_CHECKPOINT_DIR;
             if (ckpt && !cmd.includes("--checkpoint")) {
               args.push("--checkpoint", ckpt);
