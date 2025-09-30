@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DetectionJob {
+  id           String        @id @default(cuid())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  status       JobStatus     @default(queued)
+  progress     Float         @default(0)
+  step         String        @default("")
+  type         MediaType
+  fileName     String
+  filePath     String
+  errorMessage String?
+  result       DetectionResult?
+  events       JobEvent[]
+}
+
+model JobEvent {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  type      EventType
+  message   String
+  progress  Float?
+  job       DetectionJob @relation(fields: [jobId], references: [id])
+  jobId     String
+}
+
+model DetectionResult {
+  id          String        @id @default(cuid())
+  createdAt   DateTime      @default(now())
+  score       Float
+  verdict     Verdict
+  inputType   MediaType
+  inputWidth  Int
+  inputHeight Int
+  durationSec Int
+  heatmap     String?
+  artifacts   Json?
+  metadata    Json?
+  timeline    Json?
+  reportUrl   String?
+  job         DetectionJob  @relation(fields: [jobId], references: [id])
+  jobId       String @unique
+}
+
+enum JobStatus {
+  uploading
+  queued
+  analyzing
+  postprocessing
+  complete
+  error
+}
+
+enum EventType {
+  progress
+  step
+  warning
+  complete
+  error
+}
+
+enum MediaType {
+  image
+  video
+}
+
+enum Verdict {
+  likely_real
+  inconclusive
+  likely_fake
+}
+
+

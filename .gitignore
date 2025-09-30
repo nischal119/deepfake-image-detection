@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.venv/
+.env*
+frontend/node_modules/
+frontend/.next/
+frontend/.env*
+**/.DS_Store
+**/*.db
+**/*.db-journal
+**/uploads/
+**/tmp/
+
+
+deepfake_vs_real_image_detection/checkpoint-14282/*.pt
+deepfake_vs_real_image_detection/checkpoint-14282/*.bin
+deepfake_vs_real_image_detection/checkpoint-14282/*.safetensors
