@@ -135,7 +135,6 @@ export default function HistoryPage() {
                   <TableHead className="w-32">Confidence</TableHead>
                   <TableHead className="w-36">Verdict</TableHead>
                   <TableHead className="w-48">Date</TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -176,27 +175,6 @@ export default function HistoryPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(item.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {/* Report download removed per requirements */}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Delete"
-                          onClick={() => handleDelete(item.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -43,14 +43,6 @@ export default function HomePage() {
               <Button asChild size="lg" className="min-w-40">
                 <Link href="/detect">Try Detection</Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="min-w-40 bg-transparent"
-              >
-                <Link href="#demo">View Demo</Link>
-              </Button>
             </div>
 
             {/* Hero Image */}
@@ -132,77 +124,6 @@ export default function HomePage() {
       </section>
 
       {/* Trust Bar Section */}
-      <section className="border-t border-border/40 py-16">
-        <div className="container">
-          <p className="mb-8 text-center text-sm font-medium uppercase tracking-wider text-muted-foreground">
-            Powered by industry-leading technology
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-12 opacity-60 grayscale">
-            <div className="text-2xl font-bold">OpenAI</div>
-            <div className="text-2xl font-bold">Hugging Face</div>
-            <div className="text-2xl font-bold">Vercel</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="border-t border-border/40 py-24">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Why Choose Our Detector
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Advanced AI technology with transparent, explainable results
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: "Real-time Analysis",
-                description:
-                  "Get instant feedback with live progress updates and streaming results",
-              },
-              {
-                title: "Visual Evidence",
-                description:
-                  "Heatmaps and artifact overlays show exactly where manipulations occur",
-              },
-              {
-                title: "Confidence Scores",
-                description:
-                  "Clear numerical scores help you make informed decisions",
-              },
-              {
-                title: "Detailed Reports",
-                description:
-                  "Download comprehensive PDF reports for documentation",
-              },
-              {
-                title: "History Tracking",
-                description:
-                  "Keep track of all your detections with searchable history",
-              },
-              {
-                title: "Model Transparency",
-                description: "View model performance metrics and health status",
-              },
-            ].map((feature, i) => (
-              <Card
-                key={i}
-                className="border-border/50 bg-card/50 p-6 backdrop-blur"
-              >
-                <CheckCircle2 className="mb-4 h-6 w-6 text-primary" />
-                <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* CTA Section */}
       <section className="border-t border-border/40 py-24">

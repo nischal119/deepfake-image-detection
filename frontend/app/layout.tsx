@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "DeepFake Detector – Verify Image and Video Authenticity",
   description:
     "Upload media to detect deepfakes with a fine-tuned model. Clear scores, evidence overlays, and downloadable reports.",
-  generator: "v0.app",
+
   openGraph: {
     type: "website",
     title: "DeepFake Detector – Verify Image and Video Authenticity",
