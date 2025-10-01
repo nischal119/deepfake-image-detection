@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Navbar } from "@/components/layout/navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Eye, Trash2, Search, ImageIcon, Video } from "lucide-react";
+import { Eye, Trash2, Search, ImageIcon, Video } from "lucide-react";
 import type { HistoryItem, Verdict } from "@/lib/types";
 import { api } from "@/lib/api";
 import { formatDate, formatScore } from "@/lib/format";
@@ -76,8 +75,6 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-
       <main className="container py-8">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold tracking-tight">
@@ -189,13 +186,7 @@ export default function HistoryPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Download report"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        {/* Report download removed per requirements */}
                         <Button
                           size="icon"
                           variant="ghost"

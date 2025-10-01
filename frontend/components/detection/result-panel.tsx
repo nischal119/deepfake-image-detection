@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScoreGauge } from "@/components/results/score-gauge";
 import { EvidenceTabs } from "@/components/results/evidence-tabs";
-import { Download, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import type { DetectionResult } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -16,10 +16,6 @@ interface ResultPanelProps {
 }
 
 export function ResultPanel({ result, onNewUpload }: ResultPanelProps) {
-  const handleDownloadReport = () => {
-    window.open(result.reportUrl, "_blank");
-  };
-
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -31,7 +27,7 @@ export function ResultPanel({ result, onNewUpload }: ResultPanelProps) {
         </div>
 
         {result.input.type === "image" && result.input.previewUrl && (
-          <div className="mb-6 max-w-md overflow-hidden rounded-lg border border-border/50">
+          <div className="mb-6 max-w-sm overflow-hidden rounded-lg border border-border/50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={result.input.previewUrl}
@@ -42,6 +38,7 @@ export function ResultPanel({ result, onNewUpload }: ResultPanelProps) {
         )}
         {result.input.type === "video" && result.input.previewUrl && (
           <div className="mb-6 max-w-md overflow-hidden rounded-lg border border-border/50">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video
               src={result.input.previewUrl}
               controls
@@ -79,14 +76,6 @@ export function ResultPanel({ result, onNewUpload }: ResultPanelProps) {
 
       <Card className="p-6">
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            onClick={handleDownloadReport}
-            variant="secondary"
-            className="flex-1"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download Report
-          </Button>
           <Button onClick={onNewUpload} className="flex-1">
             <Upload className="mr-2 h-4 w-4" />
             New Upload

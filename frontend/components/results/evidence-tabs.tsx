@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -20,52 +20,80 @@ const severityColors = {
 };
 
 export function EvidenceTabs({ result }: EvidenceTabsProps) {
-  const [heatmapOpacity, setHeatmapOpacity] = useState([70]);
+  const [heatmapOpacity, setHeatmapOpacity] = useState([85]);
+  const timelineData = useMemo(() => {
+    if (result.timeline && result.timeline.length > 0) return result.timeline;
+    // Generate a simple flat timeline when missing
+    return Array.from({ length: 20 }).map((_, i) => ({
+      t: i,
+      score: result.score,
+    }));
+  }, [result.timeline, result.score]);
+
+  // Consider data URLs, public paths, and empty strings; require non-empty string
+  const hasHeatmap = Boolean(
+    typeof result.explanations.heatmap === "string" &&
+      result.explanations.heatmap.trim().length > 0
+  );
+  const baseImage = result.input.previewUrl || "/placeholder.jpg";
+
+  const hasArtifacts =
+    Array.isArray(result.explanations.artifacts) &&
+    result.explanations.artifacts.length > 0;
 
   return (
     <Card className="p-6">
       <Tabs
-        defaultValue={result.explanations.heatmap ? "heatmap" : "artifacts"}
+        defaultValue={hasHeatmap ? "heatmap" : "artifacts"}
         className="w-full"
       >
         <TabsList className="grid w-full grid-cols-4">
-          {result.explanations.heatmap && (
-            <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
+          {hasHeatmap && <TabsTrigger value="heatmap">Heatmap</TabsTrigger>}
+          {hasArtifacts && (
+            <TabsTrigger value="artifacts">
+              Artifacts
+              <Badge variant="secondary" className="ml-2">
+                {result.explanations.artifacts.length}
+              </Badge>
+            </TabsTrigger>
           )}
-          <TabsTrigger value="artifacts">
-            Artifacts
-            <Badge variant="secondary" className="ml-2">
-              {result.explanations.artifacts.length}
-            </Badge>
-          </TabsTrigger>
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
-          {result.timeline && (
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          )}
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
-        {result.explanations.heatmap && (
+        {hasHeatmap && (
           <TabsContent value="heatmap" className="space-y-4">
             <div>
               <h3 className="mb-2 font-semibold">Attention Heatmap</h3>
               <p className="text-sm text-muted-foreground">
-                Red areas indicate regions where the model detected potential
-                manipulations
+                Colored regions indicate model attention correlated with
+                manipulation likelihood.
               </p>
             </div>
 
-            <div className="relative max-w-md overflow-hidden rounded-lg border border-border/50 bg-muted/20">
+            <div className="relative max-w-2xl overflow-hidden rounded-lg border border-border/50 bg-muted/20">
+              {/* Base image */}
+              <img
+                src={baseImage}
+                alt="Original media"
+                className="w-full h-auto block object-contain"
+              />
+              {/* Heatmap overlay */}
               <img
                 src={result.explanations.heatmap || "/placeholder.svg"}
                 alt="Detection heatmap"
-                className="w-full"
-                style={{ opacity: heatmapOpacity[0] / 100 }}
+                className="pointer-events-none absolute inset-0 w-full h-full object-cover"
+                style={{
+                  opacity: Math.min(1, Math.max(0, heatmapOpacity[0] / 100)),
+                  mixBlendMode: "multiply",
+                  filter: "saturate(2.25) contrast(2) hue-rotate(10deg)",
+                }}
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Overlay Opacity</span>
+                <span className="text-muted-foreground">Heatmap Opacity</span>
                 <span className="font-medium">{heatmapOpacity[0]}%</span>
               </div>
               <Slider
@@ -79,46 +107,48 @@ export function EvidenceTabs({ result }: EvidenceTabsProps) {
           </TabsContent>
         )}
 
-        <TabsContent value="artifacts" className="space-y-4">
-          <div>
-            <h3 className="mb-2 font-semibold">Detected Artifacts</h3>
-            <p className="text-sm text-muted-foreground">
-              Specific anomalies and inconsistencies found during analysis
-            </p>
-          </div>
+        {hasArtifacts && (
+          <TabsContent value="artifacts" className="space-y-4">
+            <div>
+              <h3 className="mb-2 font-semibold">Detected Artifacts</h3>
+              <p className="text-sm text-muted-foreground">
+                Specific anomalies and inconsistencies found during analysis
+              </p>
+            </div>
 
-          <div className="space-y-3">
-            {result.explanations.artifacts.map((artifact, i) => (
-              <Card key={i} className="border-border/50 bg-muted/20 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle
-                    className="h-5 w-5 shrink-0 mt-0.5"
-                    style={{ color: severityColors[artifact.severity] }}
-                  />
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="font-medium">{artifact.name}</span>
-                      <Badge
-                        variant="outline"
-                        style={{
-                          borderColor: severityColors[artifact.severity],
-                          color: severityColors[artifact.severity],
-                        }}
-                      >
-                        {artifact.severity}
-                      </Badge>
+            <div className="space-y-3">
+              {result.explanations.artifacts.map((artifact, i) => (
+                <Card key={i} className="border-border/50 bg-muted/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle
+                      className="h-5 w-5 shrink-0 mt-0.5"
+                      style={{ color: severityColors[artifact.severity] }}
+                    />
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="font-medium">{artifact.name}</span>
+                        <Badge
+                          variant="outline"
+                          style={{
+                            borderColor: severityColors[artifact.severity],
+                            color: severityColors[artifact.severity],
+                          }}
+                        >
+                          {artifact.severity}
+                        </Badge>
+                      </div>
+                      {artifact.frame !== undefined && (
+                        <p className="text-sm text-muted-foreground">
+                          Frame {artifact.frame}
+                        </p>
+                      )}
                     </div>
-                    {artifact.frame !== undefined && (
-                      <p className="text-sm text-muted-foreground">
-                        Frame {artifact.frame}
-                      </p>
-                    )}
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="metadata" className="space-y-4">
           <div>
@@ -185,19 +215,17 @@ export function EvidenceTabs({ result }: EvidenceTabsProps) {
           </div>
         </TabsContent>
 
-        {result.timeline && (
-          <TabsContent value="timeline" className="space-y-4">
-            <div>
-              <h3 className="mb-2 font-semibold">Per-Frame Analysis</h3>
-              <p className="text-sm text-muted-foreground">
-                Confidence scores over time showing how manipulation varies
-                throughout the video
-              </p>
-            </div>
+        <TabsContent value="timeline" className="space-y-4">
+          <div>
+            <h3 className="mb-2 font-semibold">Per-Frame Analysis</h3>
+            <p className="text-sm text-muted-foreground">
+              Confidence scores over time showing how manipulation likelihood
+              varies.
+            </p>
+          </div>
 
-            <TimelineChart data={result.timeline} />
-          </TabsContent>
-        )}
+          <TimelineChart data={timelineData} />
+        </TabsContent>
       </Tabs>
     </Card>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Navbar } from "@/components/layout/navbar";
 import { UploadCard } from "@/components/upload/upload-card";
 import { AnalysisProgress } from "@/components/detection/analysis-progress";
 import { ResultPanel } from "@/components/detection/result-panel";
@@ -14,7 +13,7 @@ export default function DetectPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = (file: File | null) => {
     setUploadedFile(file);
     setStatus("idle");
     setResult(null);
@@ -114,8 +113,6 @@ export default function DetectPage() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-
       <main className="container py-8">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold tracking-tight">

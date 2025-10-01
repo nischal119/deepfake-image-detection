@@ -10,6 +10,35 @@ function pathFromUrl(publicUrl: string): string {
   return path.join(process.cwd(), "public", rel);
 }
 
+function ensurePublicAsset(
+  absOrData: string | undefined,
+  jobId: string
+): string {
+  if (!absOrData) return "";
+  if (absOrData.startsWith("data:")) return absOrData; // already data URL
+  if (/^https?:\/\//i.test(absOrData)) return absOrData; // remote URL
+  // Might be a filesystem path or relative path
+  const abs = path.isAbsolute(absOrData)
+    ? absOrData
+    : path.join(process.cwd(), absOrData);
+  try {
+    if (fs.existsSync(abs)) {
+      const ext = path.extname(abs) || ".png";
+      const outDir = path.join(process.cwd(), "public", "heatmaps");
+      fs.mkdirSync(outDir, { recursive: true });
+      const outPath = path.join(outDir, `${jobId}${ext}`);
+      if (abs !== outPath) fs.copyFileSync(abs, outPath);
+      const publicUrl = `/heatmaps/${jobId}${ext}`;
+      return publicUrl;
+    }
+  } catch {}
+  // Maybe it's base64 without a prefix
+  if (/^[A-Za-z0-9+/=]+$/.test(absOrData.slice(0, 50))) {
+    return `data:image/png;base64,${absOrData}`;
+  }
+  return "";
+}
+
 let started = false;
 
 export function ensureWorkerStarted() {
@@ -72,10 +101,27 @@ export function ensureWorkerStarted() {
               filePath,
               "--explain",
             ]; // request heatmap/artifacts
-            const ckpt = process.env.MODEL_CHECKPOINT_DIR;
+            // Prefer env checkpoint; otherwise fallback to local fine-tuned checkpoint if present
+            let ckpt = process.env.MODEL_CHECKPOINT_DIR;
+            if (!ckpt) {
+              const fallbackCkpt = path.join(
+                process.cwd(),
+                "..",
+                "deepfake_vs_real_image_detection",
+                "checkpoint-14282"
+              );
+              if (fs.existsSync(fallbackCkpt)) ckpt = fallbackCkpt;
+            }
             if (ckpt && !cmd.includes("--checkpoint")) {
               args.push("--checkpoint", ckpt);
             }
+
+            // Temperature: default to 1.0 for higher sensitivity to fakes (configurable via env MODEL_TEMP)
+            const temp = process.env.MODEL_TEMP || "1.0";
+            if (!cmd.includes("--temp")) {
+              args.push("--temp", String(temp));
+            }
+
             args.push("--out", outFile, "--quiet");
             const bin = fs.existsSync(pythonBin) ? pythonBin : "python";
             const child = spawn(bin, args, { shell: false });
@@ -112,12 +158,24 @@ export function ensureWorkerStarted() {
                 | "inconclusive"
                 | undefined;
               let heatmap: string | undefined;
+              let artifacts: any[] | undefined;
+              let metadata: Record<string, any> | undefined;
+              let timeline: Array<{ t: number; score: number }> | undefined;
+              let reportUrl: string | undefined;
               const tryParse = (s: string) => {
                 try {
                   const parsed = JSON.parse(s);
                   if (typeof parsed.score === "number") score = parsed.score;
                   if (typeof parsed.heatmap === "string")
                     heatmap = parsed.heatmap;
+                  if (parsed.artifacts && Array.isArray(parsed.artifacts))
+                    artifacts = parsed.artifacts;
+                  if (parsed.metadata && typeof parsed.metadata === "object")
+                    metadata = parsed.metadata;
+                  if (parsed.timeline && Array.isArray(parsed.timeline))
+                    timeline = parsed.timeline;
+                  if (typeof parsed.reportUrl === "string")
+                    reportUrl = parsed.reportUrl;
                   if (
                     parsed.verdict === "likely_fake" ||
                     parsed.verdict === "likely_real" ||
@@ -145,6 +203,9 @@ export function ensureWorkerStarted() {
                 });
                 return;
               }
+
+              // normalize heatmap to public URL or data URL
+              const heatmapPublic = ensurePublicAsset(heatmap, job.id);
 
               let width = 0,
                 height = 0;
@@ -182,27 +243,23 @@ export function ensureWorkerStarted() {
                     inputWidth: width,
                     inputHeight: height,
                     durationSec: job.type === "video" ? 0 : 0,
-                    heatmap: heatmap || "",
-                    artifacts: [],
-                    metadata: {},
-                    timeline: [],
-                    reportUrl: "",
+                    heatmap: heatmapPublic || "",
+                    artifacts: artifacts || [],
+                    metadata: metadata || {},
+                    timeline: timeline || [],
+                    reportUrl: reportUrl || `/api/reports/${job.id}`,
                   },
                 });
               }
               await prisma.detectionJob.update({
                 where: { id: job.id },
-                data: {
-                  status: "complete",
-                  step: "Complete",
-                  progress: 1,
-                },
+                data: { status: "complete", step: "Complete", progress: 1 },
               });
             });
           }
         }
 
-        const updated = await prisma.detectionJob.update({
+        await prisma.detectionJob.update({
           where: { id: job.id },
           data: {
             progress: nextProgress,

@@ -2,15 +2,21 @@
 
 import type React from "react";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud, X, ImageIcon, Video, FileWarning } from "lucide-react";
+import {
+  UploadCloud,
+  X,
+  ImageIcon,
+  VideoIcon,
+  FileWarning,
+} from "lucide-react";
 import { formatFileSize } from "@/lib/format";
 
 interface UploadCardProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (file: File | null) => void;
   onStartAnalysis: (file: File) => void;
   disabled?: boolean;
   currentFile: File | null;
@@ -27,6 +33,7 @@ export function UploadCard({
 }: UploadCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
+  // Removed camera capture functionality per request
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -60,11 +67,8 @@ export function UploadCard({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-
       const file = e.dataTransfer.files[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
@@ -82,9 +86,7 @@ export function UploadCard({
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
@@ -95,15 +97,15 @@ export function UploadCard({
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image") !== -1) {
           const file = items[i].getAsFile();
-          if (file) {
-            handleFile(file);
-          }
+          if (file) handleFile(file);
           break;
         }
       }
     },
     [handleFile]
   );
+
+  // Camera capture functions removed
 
   const previewUrl = useMemo(
     () => (currentFile ? URL.createObjectURL(currentFile) : null),
@@ -113,11 +115,14 @@ export function UploadCard({
   return (
     <Card className="p-6">
       <div className="space-y-6">
-        <div>
-          <h2 className="mb-1 text-xl font-semibold">Upload Media</h2>
-          <p className="text-sm text-muted-foreground">
-            Select an image or video to analyze for deepfakes
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="mb-1 text-xl font-semibold">Upload Media</h2>
+            <p className="text-sm text-muted-foreground">
+              Select an image or video to analyze for deepfakes
+            </p>
+          </div>
+          {/* Capture button removed */}
         </div>
 
         {!currentFile ? (
@@ -161,9 +166,7 @@ export function UploadCard({
               <p className="text-xs text-muted-foreground">
                 You can also paste from clipboard
               </p>
-              <p className="text-xs text-muted-foreground">
-                Try webcam for quick snapshots
-              </p>
+              {/* Webcam hint removed */}
             </div>
           </div>
         ) : (
@@ -173,8 +176,8 @@ export function UploadCard({
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
                 style={{ backgroundColor: "oklch(0.62 0.19 280 / 0.15)" }}
               >
-                {currentFile.type.startsWith("video") ? (
-                  <Video
+                {currentFile.type.startsWith("video/") ? (
+                  <VideoIcon
                     className="h-6 w-6"
                     style={{ color: "oklch(0.62 0.19 280)" }}
                   />
@@ -196,7 +199,7 @@ export function UploadCard({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => onFileSelect(null as any)}
+                onClick={() => onFileSelect(null)}
                 disabled={disabled}
                 aria-label="Remove file"
               >
@@ -215,6 +218,7 @@ export function UploadCard({
             )}
             {currentFile.type.startsWith("video/") && previewUrl && (
               <div className="max-w-md overflow-hidden rounded-lg border border-border/50">
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video src={previewUrl} controls className="h-auto w-full" />
               </div>
             )}
@@ -241,6 +245,8 @@ export function UploadCard({
           </div>
         </div>
       </div>
+
+      {/* Capture dialog removed */}
     </Card>
   );
 }
