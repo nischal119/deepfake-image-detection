@@ -22,6 +22,18 @@ _video_project = os.path.join(_repo_root, "projects", "deepfake-detector-video")
 if _video_project not in sys.path:
     sys.path.insert(0, _video_project)
 
+try:
+    import numpy as np
+    print(f"DEBUG: Worker numpy version: {np.__version__}")
+except ImportError:
+    print("DEBUG: numpy not found")
+
+try:
+    import torch
+    print(f"DEBUG: Worker torch version: {torch.__version__}")
+except Exception as te:
+    print(f"DEBUG: torch import failed: {te}")
+
 print(f"DEBUG: Worker sys.path: {sys.path[:3]}")
 print(f"DEBUG: Worker PYTHONPATH: {os.environ.get('PYTHONPATH')}")
 
@@ -116,9 +128,14 @@ def process_video(self, video_id: str):
         except Exception as sql_e:
             print(f"FAILED raw SQL error update: {sql_e}", file=sys.stderr)
 
-        # Don't retry on import or code errors
-        _fatal_errors = ["ModuleNotFoundError", "ImportError", "NameError", "AttributeError"]
+        # Don't retry on import, code errors, or terminal video errors
+        _fatal_errors = [
+            "ModuleNotFoundError", "ImportError", "NameError", 
+            "AttributeError", "FileNotFoundError", "RuntimeError",
+            "Cannot open video", "No frames in video"
+        ]
         if any(err in error_msg for err in _fatal_errors):
+            print(f"FATAL ERROR for video {video_id}: {error_msg}. Not retrying.")
             return {"status": "error", "error": error_msg}
             
         raise self.retry(exc=e)
