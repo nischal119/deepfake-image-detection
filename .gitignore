@@ -15,3 +15,6 @@ frontend/.env*
 deepfake_vs_real_image_detection/checkpoint-14282/*.pt
 deepfake_vs_real_image_detection/checkpoint-14282/*.bin
 deepfake_vs_real_image_detection/checkpoint-14282/*.safetensors
+
+deepfake-videos
+deepfake-videos-full

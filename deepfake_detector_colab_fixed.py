@@ -101,10 +101,7 @@ def ensure_kaggle_dataset_colab(data_dir: Path) -> Path:
 
 
 def resolve_dataset_root() -> Path:
-    """
-    - If running in Colab: ensure dataset exists under /content/deepfake_dataset and return its Dataset folder.
-    - Else: use local "Dataset" folder next to this script.
-    """
+
     if in_colab():
         base = ensure_kaggle_dataset_colab(Path("/content/deepfake_dataset"))
         return base
@@ -118,12 +115,12 @@ def resolve_dataset_root() -> Path:
 
 
 def build_dataframe(base_path: Path) -> pd.DataFrame:
-    print("🔍 Scanning dataset directory...")
+    print("Scanning dataset directory...")
     file_names, labels = [], []
 
     # Get all jpg files first
     all_files = list(base_path.rglob("*.jpg"))
-    print(f"📁 Found {len(all_files)} image files")
+    print(f"Found {len(all_files)} image files")
 
     # Process with progress bar
     for file in tqdm(all_files, desc="📊 Building dataset", unit="images"):
@@ -131,27 +128,27 @@ def build_dataframe(base_path: Path) -> pd.DataFrame:
         file_names.append(str(file))
 
     df = pd.DataFrame({"image": file_names, "label": labels})
-    print(f"✅ Dataset created with {len(df)} images")
-    print(f"📈 Label distribution:\n{df['label'].value_counts()}")
+    print(f"Dataset created with {len(df)} images")
+    print(f"Label distribution:\n{df['label'].value_counts()}")
     return df
 
 
 def main():
-    print("🚀 Starting DeepFake Detector Training Pipeline")
+    print("Starting DeepFake Detector Training Pipeline")
     print("=" * 50)
 
     # Step 1: Dataset setup
-    print("\n📂 Step 1: Setting up dataset...")
+    print("\nStep 1: Setting up dataset...")
     dataset_root = resolve_dataset_root()
     print(f"📍 Using dataset at: {dataset_root.resolve()}")
 
     # Step 2: Build dataframe
-    print("\n📊 Step 2: Building dataset dataframe...")
+    print("\nStep 2: Building dataset dataframe...")
     df = build_dataframe(dataset_root)
 
     # Step 3: Balance dataset
-    print("\n⚖️  Step 3: Balancing dataset...")
-    print("🔄 Applying RandomOverSampler...")
+    print("\nStep 3: Balancing dataset...")
+    print("Applying RandomOverSampler...")
     y = df[["label"]]
     df_x = df.drop(["label"], axis=1)
     ros = RandomOverSampler(random_state=83)

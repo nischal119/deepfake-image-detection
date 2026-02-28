@@ -116,7 +116,6 @@ export function ensureWorkerStarted() {
               args.push("--checkpoint", ckpt);
             }
 
-            // Temperature: default to 1.0 for higher sensitivity to fakes (configurable via env MODEL_TEMP)
             const temp = process.env.MODEL_TEMP || "1.0";
             if (!cmd.includes("--temp")) {
               args.push("--temp", String(temp));

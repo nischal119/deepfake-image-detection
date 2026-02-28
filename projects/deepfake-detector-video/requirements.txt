@@ -1,0 +1,17 @@
+torch==2.10.0
+torchvision==0.25.0
+pytorchvideo==0.1.5
+timm==1.0.9
+opencv-python
+albumentations==1.4.3
+facenet-pytorch==2.5.3
+pandas==3.0.1
+numpy>=1.26.0,<2.0.0
+scikit-learn==1.8.0
+matplotlib==3.8.3
+ffmpeg-python==0.2.0
+sqlalchemy==2.0.29
+psycopg2-binary==2.9.9
+celery==5.3.6
+redis==5.0.1
+tqdm==4.67.3
