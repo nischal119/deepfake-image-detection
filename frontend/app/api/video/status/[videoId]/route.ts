@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const FLASK_API = process.env.FLASK_VIDEO_API_URL || "http://localhost:5000";
+const FLASK_API = process.env.FLASK_VIDEO_API_URL || "http://localhost:5001";
 
 export async function GET(
   _request: NextRequest,

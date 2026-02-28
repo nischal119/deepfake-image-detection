@@ -18,3 +18,4 @@ deepfake_vs_real_image_detection/checkpoint-14282/*.safetensors
 
 deepfake-videos
 deepfake-videos-full
+*.pyc
