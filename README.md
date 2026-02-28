@@ -48,7 +48,11 @@ pip install -r requirements.txt
 
 ### 5. Environment Configuration
 
-Create `.env` file in the `frontend` directory:
+Create `.env` file in the `frontend` directory. For the video detection flow (Flask backend):
+
+```
+FLASK_VIDEO_API_URL=http://localhost:5000
+```
 
 ## Usage
 

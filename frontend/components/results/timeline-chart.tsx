@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card"
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 interface TimelineChartProps {
-  data: Array<{ t: number; score: number }>
+  data: Array<{ t: number; score: number }>;
+  xAxisLabel?: string;
 }
 
-export function TimelineChart({ data }: TimelineChartProps) {
+export function TimelineChart({ data, xAxisLabel = "Time (s)" }: TimelineChartProps) {
   return (
     <Card className="border-border/50 bg-muted/20 p-4">
       <ResponsiveContainer width="100%" height={300}>
@@ -21,7 +22,7 @@ export function TimelineChart({ data }: TimelineChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.269 0 0)" />
           <XAxis
             dataKey="t"
-            label={{ value: "Time (s)", position: "insideBottom", offset: -5 }}
+            label={{ value: xAxisLabel, position: "insideBottom", offset: -5 }}
             stroke="oklch(0.708 0 0)"
             tick={{ fill: "oklch(0.708 0 0)" }}
           />

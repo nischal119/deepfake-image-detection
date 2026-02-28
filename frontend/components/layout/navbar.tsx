@@ -8,6 +8,7 @@ import { Shield } from "lucide-react";
 
 const navItems = [
   { label: "Detect", href: "/detect" },
+  { label: "Video Upload", href: "/video-upload" },
   { label: "History", href: "/history" },
 ];
 
