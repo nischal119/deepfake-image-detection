@@ -158,3 +158,43 @@ def serve_heatmap(video_id: str, filename: str):
     if not heatmap_dir.exists():
         return jsonify({"error": "Heatmap not found"}), 404
     return send_from_directory(str(heatmap_dir), filename)
+
+
+@video_api.route("/history", methods=["GET"])
+def get_history():
+    """Return a list of processed videos for history display."""
+    from flask import g
+    session = g.db_session
+    
+    # Optional pagination
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 50, type=int)
+    offset = (page - 1) * page_size
+    
+    videos = session.query(Video).order_by(Video.created_at.desc()).offset(offset).limit(page_size).all()
+    total = session.query(Video).count()
+    
+    history = []
+    for v in videos:
+        item = {
+            "id": v.id,
+            "filename": v.filename,
+            "status": v.status,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
+            "error_message": v.error_message
+        }
+        if v.status == "done":
+            pred = session.query(Prediction).filter_by(video_id=v.id).first()
+            if pred:
+                item["score"] = pred.video_score
+                item["verdict"] = pred.prediction
+                item["num_frames"] = pred.num_frames
+                item["processing_time_sec"] = pred.processing_time_sec
+        history.append(item)
+        
+    return jsonify({
+        "items": history,
+        "page": page,
+        "pageSize": page_size,
+        "total": total
+    })
