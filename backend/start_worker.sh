@@ -4,9 +4,11 @@
 # Navigate to the backend directory
 cd "$(dirname "$0")"
 
-# Set PYTHONPATH to include the current directory (backend/)
-# This ensures that child processes created by Celery can always find the 'app' module.
-export PYTHONPATH=$PYTHONPATH:$(pwd)
+# Set PYTHONPATH to include the backend/ and the video project
+# This ensures Celery can find both 'app' and 'src.deploy.infer_video'
+BACKEND_DIR=$(pwd)
+VIDEO_PROJECT_DIR="$(dirname "$BACKEND_DIR")/projects/deepfake-detector-video"
+export PYTHONPATH="$BACKEND_DIR:$VIDEO_PROJECT_DIR:$PYTHONPATH"
 
 echo "Starting Celery worker for DeepFake detection..."
 echo "PYTHONPATH is set to: $PYTHONPATH"

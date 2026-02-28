@@ -18,7 +18,7 @@ interface VideoResultPanelProps {
 
 function scoreToVerdict(score: number): Verdict {
   if (score < 0.3) return "likely_real";
-  if (score < 0.7) return "inconclusive";
+  if (score < 0.6) return "inconclusive";
   return "likely_fake";
 }
 

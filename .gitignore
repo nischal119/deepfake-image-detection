@@ -9,6 +9,7 @@ frontend/.env*
 **/*.db
 **/*.db-journal
 **/uploads/
+**/heatmaps/
 **/tmp/
 
 

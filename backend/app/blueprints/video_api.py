@@ -148,3 +148,13 @@ def video_result(video_id: str):
         "processing_time_sec": pred.processing_time_sec,
         "frame_scores": [{"frame_index": f.frame_index, "score": f.frame_score, "heatmap_url": f.heatmap_url} for f in frames],
     })
+
+
+@video_api.route("/heatmaps/<video_id>/<filename>", methods=["GET"])
+def serve_heatmap(video_id: str, filename: str):
+    """Serve generated saliency heatmap images."""
+    from flask import send_from_directory
+    heatmap_dir = Path(current_app.root_path).parent / "heatmaps" / video_id
+    if not heatmap_dir.exists():
+        return jsonify({"error": "Heatmap not found"}), 404
+    return send_from_directory(str(heatmap_dir), filename)

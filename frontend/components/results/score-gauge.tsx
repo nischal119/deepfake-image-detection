@@ -109,13 +109,13 @@ export function ScoreGauge({ score, verdict }: ScoreGaugeProps) {
         </div>
         <div>
           <div className="mb-1 font-medium" style={{ color: "oklch(0.8 0.15 85)" }}>
-            0.30 - 0.70
+            0.30 - 0.60
           </div>
           <div className="text-xs text-muted-foreground">Inconclusive</div>
         </div>
         <div>
           <div className="mb-1 font-medium" style={{ color: "oklch(0.65 0.2 15)" }}>
-            0.70 - 1.00
+            0.60 - 1.00
           </div>
           <div className="text-xs text-muted-foreground">Likely Fake</div>
         </div>

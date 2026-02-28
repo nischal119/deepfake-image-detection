@@ -224,7 +224,7 @@ export function ensureWorkerStarted() {
 
               const finalVerdict =
                 verdict ??
-                (score > 0.7
+                (score > 0.6
                   ? "likely_fake"
                   : score < 0.3
                   ? "likely_real"
