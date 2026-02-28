@@ -9,15 +9,23 @@ import sys
 import time
 import uuid
 from pathlib import Path
+# Ensure backend is in PYTHONPATH for all sub-processes
+_backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.environ["PYTHONPATH"] = _backend_root + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+if _backend_root not in sys.path:
+    sys.path.insert(0, _backend_root)
+
+# Also add the project root for model inference
+_repo_root = os.path.dirname(_backend_root)
+_video_project = os.path.join(_repo_root, "projects", "deepfake-detector-video")
+if _video_project not in sys.path:
+    sys.path.insert(0, _video_project)
+
+print(f"DEBUG: Worker sys.path: {sys.path[:3]}")
+print(f"DEBUG: Worker PYTHONPATH: {os.environ.get('PYTHONPATH')}")
 
 from celery_app import celery
-
-# Add project root so we can import video inference
-REPO_ROOT = Path(__file__).resolve().parents[2]
-VIDEO_PROJECT = REPO_ROOT / "projects" / "deepfake-detector-video"
-if str(VIDEO_PROJECT) not in sys.path:
-    sys.path.insert(0, str(VIDEO_PROJECT))
-
 
 @celery.task(bind=True, max_retries=3)
 def process_video(self, video_id: str):
@@ -90,10 +98,29 @@ def process_video(self, video_id: str):
         return {"status": "done", "video_id": video_id, "video_score": result["video_score"]}
 
     except Exception as e:
-        if video:
-            video.status = "error"
-            video.error_message = str(e)
-            session.commit()
+        error_msg = str(e)
+        print(f"CRITICAL ERROR processing video {video_id}: {error_msg}", file=sys.stderr)
+        
+        # Mark as error in DB using raw psycopg2 if needed
+        try:
+            import psycopg2
+            conn = psycopg2.connect(database_url)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE videos SET status = 'error', error_message = %s, updated_at = NOW() WHERE id = %s",
+                    (error_msg, video_id)
+                )
+            conn.commit()
+            conn.close()
+            print(f"Successfully marked {video_id} as error via raw SQL")
+        except Exception as sql_e:
+            print(f"FAILED raw SQL error update: {sql_e}", file=sys.stderr)
+
+        # Don't retry on import or code errors
+        _fatal_errors = ["ModuleNotFoundError", "ImportError", "NameError", "AttributeError"]
+        if any(err in error_msg for err in _fatal_errors):
+            return {"status": "error", "error": error_msg}
+            
         raise self.retry(exc=e)
     finally:
         session.close()

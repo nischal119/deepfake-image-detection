@@ -67,7 +67,7 @@ export default function VideoUploadPage() {
       }
     };
 
-    pollRef.current = setInterval(checkStatus, 1500);
+    pollRef.current = setInterval(checkStatus, 3000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };

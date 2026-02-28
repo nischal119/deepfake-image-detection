@@ -62,7 +62,8 @@ def upload_video():
     file.save(str(storage_path))
 
     # Create DB record
-    session = current_app.db_session
+    from flask import g
+    session = g.db_session
     video = Video(
         id=video_id,
         filename=safe_name,
@@ -93,7 +94,8 @@ def upload_video():
 @video_api.route("/status/<video_id>", methods=["GET"])
 def video_status(video_id: str):
     """Return processing status and partial results."""
-    session = current_app.db_session
+    from flask import g
+    session = g.db_session
     video = session.query(Video).filter_by(id=video_id).first()
     if not video:
         return jsonify({"error": "Video not found"}), 404
@@ -117,7 +119,8 @@ def video_status(video_id: str):
 @video_api.route("/result/<video_id>", methods=["GET"])
 def video_result(video_id: str):
     """Return full result: frame scores, heatmap URLs, video score."""
-    session = current_app.db_session
+    from flask import g
+    session = g.db_session
     video = session.query(Video).filter_by(id=video_id).first()
     if not video:
         return jsonify({"error": "Video not found"}), 404

@@ -17,7 +17,7 @@ class Config:
     ALLOWED_EXTENSIONS = {"mp4", "avi", "mov", "mkv", "webm"}
     CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
     CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
-    RATE_LIMIT = os.environ.get("RATE_LIMIT", "10 per minute")
+    RATE_LIMIT = os.environ.get("RATE_LIMIT", "300 per minute")
 
 
 def init_upload_dir(app_config: dict) -> None:

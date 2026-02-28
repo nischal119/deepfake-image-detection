@@ -19,12 +19,18 @@ def create_app(config_class=Config) -> Flask:
 
     from app.models import get_engine, get_session_factory, init_db
     engine = get_engine(app.config["DATABASE_URL"])
-    app.db_session = get_session_factory(engine)()
+    session_factory = get_session_factory(engine)
     init_db(engine)
+
+    @app.before_request
+    def create_session():
+        from flask import g
+        g.db_session = session_factory()
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):
-        session = getattr(app, "db_session", None)
+        from flask import g
+        session = getattr(g, "db_session", None)
         if session:
             session.close()
 
