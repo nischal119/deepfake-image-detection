@@ -11,6 +11,12 @@ from .robustness_tests import (
     create_degraded_variants,
     DEGRADATION_FUNCS,
 )
+from .fairness_evaluation import (
+    run_fairness_evaluation,
+    load_and_merge,
+    compute_per_group_metrics,
+    GroupMetrics,
+)
 
 __all__ = [
     "VideoMetrics",
@@ -20,4 +26,8 @@ __all__ = [
     "run_robustness_tests",
     "create_degraded_variants",
     "DEGRADATION_FUNCS",
+    "run_fairness_evaluation",
+    "load_and_merge",
+    "compute_per_group_metrics",
+    "GroupMetrics",
 ]
