@@ -1,0 +1,3 @@
+{
+  "databaseUrl": "postgresql://localhost:5432/deepfake_video"
+}

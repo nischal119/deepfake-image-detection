@@ -15,4 +15,7 @@ echo "PYTHONPATH is set to: $PYTHONPATH"
 python -c "import numpy; print(f'Numpy version: {numpy.__version__}')"
 
 # Run the worker with solo pool for better stability on macOS
-celery -A celery_app worker --loglevel=info -P solo
+# Disable celery heartbeat/gossip/mingle to avoid issues in some environments
+# (e.g. "Load averages are unobtainable"). Also force concurrency=1 to avoid
+# multiple heavy video jobs running at once if multiple workers are launched.
+celery -A celery_app worker --loglevel=info -P solo --concurrency=1 --without-heartbeat --without-gossip --without-mingle

@@ -17,10 +17,10 @@ def create_app(config_class=Config) -> Flask:
     from app.blueprints.video_api import video_api
     app.register_blueprint(video_api, url_prefix="/api/video")
 
-    from app.models import get_engine, get_session_factory, init_db
+    from app.models import get_engine, get_session_factory, init_db_with_retry
     engine = get_engine(app.config["DATABASE_URL"])
     session_factory = get_session_factory(engine)
-    init_db(engine)
+    init_db_with_retry(engine)
 
     @app.before_request
     def create_session():

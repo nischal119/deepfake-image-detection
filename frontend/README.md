@@ -25,9 +25,9 @@ A production-ready Next.js application for detecting deepfakes in images and vid
 - `NEXT_PUBLIC_ENABLE_WEBCAM` - Enable webcam capture feature
 - `NEXT_PUBLIC_ENABLE_AUTH` - Enable authentication features
 
-### Database (Prisma + SQLite)
+### Database (Prisma + Postgres)
 
-- `DATABASE_URL` - e.g. `file:./dev.db`
+- `DATABASE_URL` - Postgres connection string, e.g. `postgresql://localhost:5432/deepfake_video`
 
 ## Database Setup
 
@@ -35,7 +35,7 @@ A production-ready Next.js application for detecting deepfakes in images and vid
    - `pnpm add -D prisma && pnpm add @prisma/client`
 2. Generate client
    - `pnpm prisma:generate`
-3. Run migrations (creates `prisma/dev.db`)
+3. Run migrations
    - `pnpm prisma:migrate`
 4. Open DB studio (optional)
    - `pnpm db:studio`
