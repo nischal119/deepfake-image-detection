@@ -1,11 +1,4 @@
-"""
-Video API blueprint.
-
-Endpoints:
-  POST /api/video/upload  -> upload video, enqueue Celery job
-  GET  /api/video/status/<video_id>  -> processing status
-  GET  /api/video/result/<video_id>  -> full result with frame heatmaps and video score
-"""
+"""Video upload and results API."""
 
 import uuid
 from pathlib import Path
@@ -42,7 +35,6 @@ def upload_video():
     if not allowed_file(file.filename):
         return jsonify({"error": f"Invalid file type. Allowed: {current_app.config['ALLOWED_EXTENSIONS']}"}), 400
 
-    # File size check (streaming)
     file.seek(0, 2)
     size_bytes = file.tell()
     file.seek(0)
@@ -61,7 +53,6 @@ def upload_video():
     storage_path.parent.mkdir(parents=True, exist_ok=True)
     file.save(str(storage_path))
 
-    # Create DB record
     from flask import g
     session = g.db_session
     video = Video(
@@ -74,7 +65,6 @@ def upload_video():
     session.add(video)
     session.commit()
 
-    # Enqueue Celery job
     try:
         from tasks.process_video import process_video
         process_video.delay(video_id)
@@ -165,15 +155,14 @@ def get_history():
     """Return a list of processed videos for history display."""
     from flask import g
     session = g.db_session
-    
-    # Optional pagination
+
     page = request.args.get("page", 1, type=int)
     page_size = request.args.get("pageSize", 50, type=int)
     offset = (page - 1) * page_size
-    
+
     videos = session.query(Video).order_by(Video.created_at.desc()).offset(offset).limit(page_size).all()
     total = session.query(Video).count()
-    
+
     history = []
     for v in videos:
         item = {
@@ -191,7 +180,7 @@ def get_history():
                 item["num_frames"] = pred.num_frames
                 item["processing_time_sec"] = pred.processing_time_sec
         history.append(item)
-        
+
     return jsonify({
         "items": history,
         "page": page,

@@ -14,7 +14,8 @@ const videoProjectDir = path.join(repoRoot, "projects", "deepfake-detector-video
 const venvDir = path.join(repoRoot, ".venv")
 const venvBin = path.join(venvDir, "bin")
 
-const backendPort = 5003
+const backendPort = 5001
+let frontendPort = 3000
 const redisPort = 6379
 const redisCeleryDb = 1
 const postgresPort = 5432
@@ -93,8 +94,54 @@ function which(cmd) {
   return out.length > 0 ? out : null
 }
 
+function hasDockerCompose() {
+  const docker = which("docker")
+  if (!docker) return false
+  const res = spawnSync("docker", ["compose", "version"], { encoding: "utf8" })
+  return res.status === 0
+}
+
 function fileAppendStream(p) {
   return fs.openSync(p, "a")
+}
+
+function assertPythonDepsAvailable(pythonPath) {
+  if (!fs.existsSync(pythonPath)) {
+    throw new Error(
+      "[dev-all] Python venv not found at ./.venv. Create it and install backend deps:\n" +
+        "  python -m venv .venv\n" +
+        "  source .venv/bin/activate\n" +
+        "  pip install -r backend/requirements.txt"
+    )
+  }
+
+  const probe = spawnSync(
+    pythonPath,
+    [
+      "-c",
+      [
+        "import flask",
+        "import celery",
+        "import redis",
+        "import sqlalchemy",
+        "import psycopg2",
+        "import cv2",
+        "print('ok')",
+      ].join("; "),
+    ],
+    { encoding: "utf8" }
+  )
+
+  if (probe.status !== 0) {
+    const stderr = (probe.stderr || "").trim()
+    throw new Error(
+      "[dev-all] Backend Python dependencies are missing in ./.venv.\n" +
+        "Install them with:\n" +
+        "  source .venv/bin/activate\n" +
+        "  pip install -r backend/requirements.txt\n" +
+        (stderr ? `\nPython error:\n${stderr}\n` : "")
+    )
+  }
 }
 
 function spawnToLog({ name, cmd, args, cwd, env }) {
@@ -109,6 +156,33 @@ function spawnToLog({ name, cmd, args, cwd, env }) {
   // Don't keep the parent process alive for detached children
   child.unref()
   writePid(name, child.pid)
+}
+
+async function chooseFrontendPort() {
+  for (let p = 3000; p <= 3010; p += 1) {
+    if (!(await isPortOpen("127.0.0.1", p, 300))) {
+      frontendPort = p
+      return
+    }
+  }
+  throw new Error("[dev-all] No free frontend port found in range 3000-3010.")
+}
+
+async function ensureFrontendPortAvailable() {
+  if (!(await isPortOpen("127.0.0.1", frontendPort, 500))) return
+
+  const existingPid = readPid("next")
+  if (isPidAlive(existingPid)) {
+    console.log(`[dev-all] Next.js already running (pid ${existingPid}). Restarting...`)
+    try {
+      process.kill(existingPid, "SIGTERM")
+    } catch {}
+    await wait(500)
+    return
+  }
+
+  console.warn(`[dev-all] Frontend port :${frontendPort} is in use. Choosing another port...`)
+  await chooseFrontendPort()
 }
 
 function readBackendConfig() {
@@ -147,12 +221,22 @@ function loadEnvFileIntoProcess(envPath) {
 async function ensureRedisRunning() {
   if (await isPortOpen("127.0.0.1", redisPort)) return
 
-  console.log("[dev-all] Starting Redis...")
+  if (hasDockerCompose()) {
+    console.log("[dev-all] Starting Redis (Docker Compose)...")
+    const up = spawnSync("docker", ["compose", "up", "-d", "redis"], { cwd: repoRoot, stdio: "inherit" })
+    if (up.status !== 0) throw new Error("[dev-all] Failed to start Redis via Docker Compose.")
 
+    const ok = await waitForPort("127.0.0.1", redisPort, 20000)
+    if (!ok) throw new Error("[dev-all] Redis did not become ready on :6379 in time.")
+    return
+  }
+
+  console.log("[dev-all] Starting Redis (local redis-server)...")
   const redisServer = which("redis-server")
   if (!redisServer) {
-    console.warn("[dev-all] redis-server not found. Start Redis manually on :6379")
-    return
+    throw new Error(
+      "[dev-all] Redis is not reachable on :6379, and neither Docker Compose nor redis-server are available."
+    )
   }
 
   const child = spawn(redisServer, ["--port", String(redisPort), "--bind", "127.0.0.1"], {
@@ -162,38 +246,57 @@ async function ensureRedisRunning() {
   child.unref()
 
   const ok = await waitForPort("127.0.0.1", redisPort, 10000)
-  if (!ok) console.warn("[dev-all] Redis did not become ready in time. Continuing anyway.")
+  if (!ok) throw new Error("[dev-all] Redis did not become ready on :6379 in time.")
 }
 
 async function tryStartPostgres() {
   if (await isPortOpen("127.0.0.1", postgresPort, 1500)) return true
 
-  console.log("[dev-all] Starting Postgres (best effort)...")
+  if (hasDockerCompose()) {
+    console.log("[dev-all] Starting Postgres (Docker Compose)...")
+    const up = spawnSync("docker", ["compose", "up", "-d", "postgres"], { cwd: repoRoot, stdio: "inherit" })
+    if (up.status !== 0) return false
 
-  const brew = which("brew")
-  if (!brew) {
-    console.warn("[dev-all] Homebrew not found; please start Postgres manually on :5432")
-    return false
+    const ok = await waitForPort("127.0.0.1", postgresPort, 60000)
+    return ok
   }
 
-  // Best-effort: install+start is slow and may fail; we'll fall back to SQLite if it doesn't work.
-  const pgFormula = "postgresql@16"
-  spawnSync("brew", ["list", "--versions", pgFormula], { stdio: "ignore" })
+  console.log("[dev-all] Starting Postgres (local Homebrew service, best effort)...")
+  const brew = which("brew")
+  if (!brew) return false
 
-  // If brew services is available, try starting. (If it fails, we'll fall back.)
+  const pgFormula = "postgresql@16"
   spawnSync("brew", ["services", "start", pgFormula], { stdio: "inherit" })
 
   const ok = await waitForPort("127.0.0.1", postgresPort, 60000)
-  if (!ok) return false
-
-  return true
+  return ok
 }
 
 function getDatabaseUrlFromEnv() {
-  const databaseUrl = process.env.DATABASE_URL || "postgresql://localhost/deepfake_video"
+  const localUser = process.env.USER || process.env.LOGNAME || "postgres"
+  const fallback = hasDockerCompose()
+    ? "postgresql://postgres:postgres@localhost:5432/deepfake_app"
+    : `postgresql://${localUser}@localhost:5432/deepfake_app`
+
+  const envVal = process.env.DATABASE_URL
+  const databaseUrl = envVal || fallback
+
+  if (!hasDockerCompose() && envVal && envVal.includes("postgres:postgres@localhost")) {
+    console.warn(
+      `[dev-all] DATABASE_URL looks like a Docker credential (${envVal}), but Docker Compose is not available. Falling back to local user URL: ${fallback}`
+    )
+    return fallback
+  }
+
   if (databaseUrl.startsWith("sqlite:") || databaseUrl.includes(":./dev.db")) {
+    if (hasDockerCompose()) {
+      console.warn(
+        `[dev-all] DATABASE_URL is set to SQLite (${databaseUrl}). Overriding to Postgres for this dev stack: ${fallback}`
+      )
+      return fallback
+    }
     throw new Error(
-      "[dev-all] SQLite is not allowed. Set DATABASE_URL to a Postgres connection string in `frontend/.env`."
+      `[dev-all] SQLite is not allowed. Set DATABASE_URL to a Postgres URL in frontend/.env (example: ${fallback}).`
     )
   }
   if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
@@ -204,20 +307,79 @@ function getDatabaseUrlFromEnv() {
   return databaseUrl
 }
 
+function getDbNameFromUrl(databaseUrl) {
+  try {
+    const u = new URL(databaseUrl)
+    const name = u.pathname.replace(/^\//, "")
+    return name || null
+  } catch {
+    return null
+  }
+}
+
+function ensurePostgresDbExists(databaseUrl) {
+  const dbName = getDbNameFromUrl(databaseUrl)
+  if (!dbName) return
+
+  const createdb = which("createdb")
+  if (!createdb) return
+
+  // Best-effort: if DB already exists, createdb exits non-zero; that's fine.
+  spawnSync(createdb, [dbName], { stdio: "ignore" })
+}
+
+function getBackendDatabaseUrlFromEnv(prismaDatabaseUrl) {
+  const explicit = process.env.BACKEND_DATABASE_URL || process.env.VIDEO_DATABASE_URL
+  if (explicit) {
+    if (!hasDockerCompose() && explicit.includes("postgres:postgres@localhost")) {
+      const localUser = process.env.USER || process.env.LOGNAME || "postgres"
+      try {
+        const u = new URL(explicit)
+        return `postgresql://${localUser}@${u.hostname}${u.port ? `:${u.port}` : ""}${u.pathname}${u.search}${u.hash}`
+      } catch {
+        return `postgresql://${localUser}@localhost:5432/deepfake_video`
+      }
+    }
+    return explicit
+  }
+
+  try {
+    const u = new URL(prismaDatabaseUrl)
+    const dbName = u.pathname.replace(/^\//, "")
+    if (dbName === "deepfake_video") return prismaDatabaseUrl
+    u.pathname = "/deepfake_video"
+    return u.toString()
+  } catch {
+    return prismaDatabaseUrl
+  }
+}
+
 async function ensureBackendRunning({ databaseUrl }) {
   if (await isPortOpen("127.0.0.1", backendPort, 1000)) {
-    throw new Error(
-      `[dev-all] Backend port :${backendPort} is already in use. Stop the existing backend and rerun.`
-    )
+    const existingPid = readPid("backend")
+    if (isPidAlive(existingPid)) {
+      console.log(`[dev-all] Backend already running (pid ${existingPid}). Restarting...`)
+      try {
+        process.kill(existingPid, "SIGTERM")
+      } catch {}
+      const start = Date.now()
+      while (Date.now() - start < 3000) {
+        if (!(await isPortOpen("127.0.0.1", backendPort, 500))) break
+        await wait(200)
+      }
+    }
+
+    if (await isPortOpen("127.0.0.1", backendPort, 1000)) {
+      throw new Error(
+        `[dev-all] Backend port :${backendPort} is already in use. Stop the existing backend and rerun.`
+      )
+    }
   }
 
   console.log(`[dev-all] Starting backend on :${backendPort} (Postgres)...`)
 
-  if (!fs.existsSync(path.join(venvBin, "python"))) {
-    console.warn("[dev-all] Python venv not found at ./.venv. Install backend deps first (backend/requirements.txt).")
-  }
-
   const python = path.join(venvBin, "python")
+  assertPythonDepsAvailable(python)
   const code = `
 import os
 from app import create_app
@@ -253,14 +415,24 @@ app.run(host="0.0.0.0", port=${backendPort}, debug=False, use_reloader=False)
 
 async function ensureCeleryRunning({ databaseUrl }) {
   const existingPid = readPid("celery")
-  if (isPidAlive(existingPid)) return true
+  if (isPidAlive(existingPid)) {
+    console.log(`[dev-all] Celery worker already running (pid ${existingPid}). Restarting...`)
+    try {
+      process.kill(existingPid, "SIGTERM")
+    } catch {}
+    await wait(500)
+  }
 
   console.log("[dev-all] Starting Celery worker...")
 
   const celery = path.join(venvBin, "celery")
   if (!fs.existsSync(celery)) {
-    console.warn("[dev-all] celery binary not found in ./.venv/bin. Run backend deps install first.")
-    return false
+    throw new Error(
+      "[dev-all] Celery is not installed in ./.venv.\n" +
+        "Install backend deps with:\n" +
+        "  source .venv/bin/activate\n" +
+        "  pip install -r backend/requirements.txt"
+    )
   }
 
   const env = {
@@ -305,35 +477,46 @@ async function main() {
     )
   }
 
-  const databaseUrl = getDatabaseUrlFromEnv()
+  const prismaDatabaseUrl = getDatabaseUrlFromEnv()
+  const backendDatabaseUrl = getBackendDatabaseUrlFromEnv(prismaDatabaseUrl)
+  ensurePostgresDbExists(prismaDatabaseUrl)
+  ensurePostgresDbExists(backendDatabaseUrl)
 
   // Start backend + celery on isolated Redis DB to avoid interference with any older dev processes.
-  await ensureBackendRunning({ databaseUrl })
-  await ensureCeleryRunning({ databaseUrl })
+  await ensureBackendRunning({ databaseUrl: backendDatabaseUrl })
+  await ensureCeleryRunning({ databaseUrl: backendDatabaseUrl })
 
   // Ensure Prisma is pointed at Postgres and schema is applied.
   console.log("[dev-all] Running Prisma generate + migrations...")
-  const prismaEnv = { ...process.env, DATABASE_URL: databaseUrl }
+  const prismaEnv = { ...process.env, DATABASE_URL: prismaDatabaseUrl }
   const prismaGen = spawnSync("pnpm", ["prisma:generate"], { cwd: frontendDir, env: prismaEnv, stdio: "inherit" })
   if (prismaGen.status !== 0) throw new Error("[dev-all] prisma:generate failed.")
   const prismaMig = spawnSync("pnpm", ["prisma:migrate"], { cwd: frontendDir, env: prismaEnv, stdio: "inherit" })
   if (prismaMig.status !== 0) throw new Error("[dev-all] prisma:migrate failed.")
 
   // Launch Next.js (foreground).
-  console.log(`[dev-all] Starting Next.js (FLASK_VIDEO_API_URL=http://localhost:${backendPort})...`)
+  console.log(`[dev-all] Starting Next.js on :${frontendPort} (FLASK_VIDEO_API_URL=http://localhost:${backendPort})...`)
 
   const nextBin = path.join(frontendDir, "node_modules", ".bin", "next")
   if (!fs.existsSync(nextBin)) {
     console.warn("[dev-all] Next.js binary not found (node_modules missing?). Running `pnpm dev` might fail if deps aren't installed.")
   }
 
+  await chooseFrontendPort()
+  await ensureFrontendPortAvailable()
+
   const env = {
     ...process.env,
     FLASK_VIDEO_API_URL: `http://localhost:${backendPort}`,
+    // macOS can hit file-descriptor limits with native watchers (EMFILE).
+    // Polling is slower but far more reliable for large repos.
+    WATCHPACK_POLLING: "true",
+    WATCHPACK_POLLING_INTERVAL: "1000",
   }
 
   const next = fs.existsSync(nextBin) ? nextBin : "next"
-  const child = spawn(next, ["dev"], { cwd: frontendDir, env, stdio: "inherit" })
+  const child = spawn(next, ["dev", "-p", String(frontendPort)], { cwd: frontendDir, env, stdio: "inherit" })
+  writePid("next", child.pid)
   child.on("exit", (code) => process.exit(code ?? 0))
 }
 

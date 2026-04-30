@@ -51,7 +51,6 @@ export default function ModelPage() {
       const data = (await res.json()) as ModelInfo;
       setModelInfo(data);
     } catch (e) {
-      // Keep fallback but mark degraded
       setModelInfo((prev) => ({ ...prev, health: "degraded" }));
     }
   };
@@ -82,7 +81,6 @@ export default function ModelPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Health Status Card */}
           <Card className="p-6 lg:col-span-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -131,7 +129,6 @@ export default function ModelPage() {
             </div>
           </Card>
 
-          {/* Model Details */}
           <Card className="p-6 lg:col-span-2">
             <h3 className="mb-4 text-lg font-semibold">Model Details</h3>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -165,7 +162,6 @@ export default function ModelPage() {
             </div>
           </Card>
 
-          {/* Performance Metrics */}
           <Card className="p-6">
             <h3 className="mb-4 text-lg font-semibold">Performance</h3>
             <div className="space-y-4">
@@ -185,7 +181,6 @@ export default function ModelPage() {
             </div>
           </Card>
 
-          {/* Accuracy Metrics */}
           <Card className="p-6 lg:col-span-3">
             <h3 className="mb-4 text-lg font-semibold">Accuracy Metrics</h3>
             <div className="grid gap-4 sm:grid-cols-3">

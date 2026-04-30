@@ -32,15 +32,13 @@ const verdictConfig: Record<Verdict, { label: string; color: string; bgColor: st
 export function ScoreGauge({ score, verdict }: ScoreGaugeProps) {
   const config = verdictConfig[verdict]
   const percentage = score * 100
-  const rotation = score * 180 - 90 // -90 to 90 degrees for semi-circle
+  const rotation = score * 180 - 90
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-center">
         <div className="relative h-48 w-full max-w-sm">
-          {/* Semi-circle gauge background */}
           <svg viewBox="0 0 200 100" className="w-full">
-            {/* Background arc */}
             <path
               d="M 20 90 A 80 80 0 0 1 180 90"
               fill="none"
@@ -49,7 +47,6 @@ export function ScoreGauge({ score, verdict }: ScoreGaugeProps) {
               className="text-muted/30"
             />
 
-            {/* Colored segments */}
             <path
               d="M 20 90 A 80 80 0 0 1 66.4 26.4"
               fill="none"
@@ -72,14 +69,12 @@ export function ScoreGauge({ score, verdict }: ScoreGaugeProps) {
               opacity="0.6"
             />
 
-            {/* Needle */}
             <g transform={`rotate(${rotation} 100 90)`}>
               <line x1="100" y1="90" x2="100" y2="30" stroke={config.color} strokeWidth="3" strokeLinecap="round" />
               <circle cx="100" cy="90" r="6" fill={config.color} />
             </g>
           </svg>
 
-          {/* Score display */}
           <div className="absolute inset-x-0 bottom-0 text-center">
             <div className="text-4xl font-bold" style={{ color: config.color }}>
               {formatScore(score)}
@@ -99,7 +94,6 @@ export function ScoreGauge({ score, verdict }: ScoreGaugeProps) {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="grid grid-cols-3 gap-4 text-center text-sm">
         <div>
           <div className="mb-1 font-medium" style={{ color: "oklch(0.7 0.15 165)" }}>

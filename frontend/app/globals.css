@@ -3,27 +3,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Custom design tokens for DeepFake Detector dark theme */
 :root {
-  /* Brand Colors */
-  --brand-primary: oklch(0.62 0.19 280); /* #6C5CE7 purple */
-  --brand-secondary: oklch(0.72 0.12 195); /* #00CEC9 cyan */
-  --brand-accent: oklch(0.75 0.15 350); /* #FD79A8 pink */
+  --brand-primary: oklch(0.62 0.19 280);
+  --brand-secondary: oklch(0.72 0.12 195);
+  --brand-accent: oklch(0.75 0.15 350);
 
-  /* Surface Colors - Dark Theme */
-  --surface-base: oklch(0.08 0.01 270); /* #0B0B10 */
-  --surface-elevated: oklch(0.11 0.01 270); /* #12121A */
-  --surface-muted: oklch(0.13 0.01 270); /* #171723 */
+  --surface-base: oklch(0.08 0.01 270);
+  --surface-elevated: oklch(0.11 0.01 270);
+  --surface-muted: oklch(0.13 0.01 270);
 
-  /* Text Colors */
-  --text-primary: oklch(0.93 0 0); /* #EDEDED */
-  --text-secondary: oklch(0.72 0.01 270); /* #B5B5BE */
-  --text-danger: oklch(0.65 0.2 15); /* #FF6B6B */
-  --text-warning: oklch(0.8 0.15 85); /* #F8C12C */
-  --text-success: oklch(0.7 0.15 165); /* #1DD1A1 */
-  --text-info: oklch(0.7 0.1 240); /* #74B9FF */
+  --text-primary: oklch(0.93 0 0);
+  --text-secondary: oklch(0.72 0.01 270);
+  --text-danger: oklch(0.65 0.2 15);
+  --text-warning: oklch(0.8 0.15 85);
+  --text-success: oklch(0.7 0.15 165);
+  --text-info: oklch(0.7 0.1 240);
 
-  /* Semantic Tokens */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -60,7 +55,6 @@
 }
 
 .dark {
-  /* Updated to use custom brand colors */
   --background: var(--surface-base);
   --foreground: var(--text-primary);
   --card: var(--surface-elevated);
@@ -144,7 +138,6 @@
     @apply bg-background text-foreground;
   }
 
-  /* Added container utility for centered layouts */
   .container {
     width: 100%;
     margin-left: auto;
@@ -184,7 +177,6 @@
   }
 }
 
-/* ── Custom Animations ── */
 @keyframes floatOrb {
   0%, 100% { transform: translate(0, 0) scale(1); }
   25% { transform: translate(30px, -40px) scale(1.05); }
@@ -197,7 +189,6 @@
   50% { box-shadow: 0 0 40px var(--glow-color, rgba(108,92,231,0.5)); }
 }
 
-/* Heatmap image error fallback */
 img[alt*="Heatmap"][aria-invalid="true"],
 img[alt*="heatmap"][aria-invalid="true"] {
   display: none;

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const page = Number(searchParams.get("page") || 1);
   const pageSize = Number(searchParams.get("pageSize") || 20);
 
-  // 1. Fetch images from Prisma
+  // This endpoint merges image (Prisma) and video (Flask) history for a unified UI.
   const [dbItems, dbTotal] = await Promise.all([
     prisma.detectionResult.findMany({
       orderBy: { createdAt: "desc" },
@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
     createdAt: r.createdAt.toISOString(),
   }));
 
-  // 2. Fetch videos from Flask API
   let videos: any[] = [];
   let videoTotal = 0;
   try {
@@ -37,10 +36,9 @@ export async function GET(request: NextRequest) {
     if (res.ok) {
       const data = await res.json();
       videoTotal = data.total || 0;
-      
-      // Keep only successful/done video detections
+
       const validVideos = (data.items || []).filter((v: any) => v.status === "done");
-      
+
       videos = validVideos.map((v: any) => {
         let verdict = "inconclusive";
         const score = v.score ?? 0;
@@ -61,12 +59,10 @@ export async function GET(request: NextRequest) {
     console.error("Failed to fetch video history:", error);
   }
 
-  // 3. Merge and sort descending
   const combined = [...images, ...videos].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  // 4. Paginate
   const start = (page - 1) * pageSize;
   const paginatedItems = combined.slice(start, start + pageSize);
   const total = dbTotal + videoTotal; // Note: approximation for simple UI

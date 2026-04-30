@@ -4,6 +4,7 @@ node_modules/
 .env*
 frontend/node_modules/
 frontend/.next/
+frontend/.cache/
 frontend/.env*
 **/.DS_Store
 **/*.db
@@ -21,3 +22,6 @@ deepfake-videos
 deepfake-videos-full
 *.pyc
 *.log
+
+# Dev orchestration artifacts
+frontend/.cache/dev-all/

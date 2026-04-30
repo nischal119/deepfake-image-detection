@@ -39,8 +39,6 @@ import {
   YAxis,
 } from "recharts";
 
-/* ───────────────────── Types ───────────────────── */
-
 type MediaType = "image" | "video";
 type UnifiedStatus = "idle" | "uploading" | "processing" | "complete" | "error";
 
@@ -91,8 +89,6 @@ const verdictConfig: Record<
   },
 };
 
-/* ───────────────────── Main Page ───────────────────── */
-
 export default function DetectPage() {
   const [status, setStatus] = useState<UnifiedStatus>("idle");
   const [mediaType, setMediaType] = useState<MediaType | null>(null);
@@ -100,17 +96,15 @@ export default function DetectPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Image flow
   const [jobId, setJobId] = useState<string | null>(null);
   const [imageResult, setImageResult] = useState<DetectionResult | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Video flow
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoResult, setVideoResult] = useState<VideoResultResponse | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
-
-  /* ── File handling ── */
+  const videoPollStartedAtRef = useRef<number | null>(null);
+  const videoPollConsecutiveFailuresRef = useRef<number>(0);
 
   const handleFileSelect = useCallback(
     (file: File | null) => {
@@ -149,8 +143,6 @@ export default function DetectPage() {
     [handleFileSelect, toast]
   );
 
-  /* ── Analysis ── */
-
   const handleStartAnalysis = useCallback(
     async (file: File) => {
       const isVideo = file.type.startsWith("video/");
@@ -159,12 +151,10 @@ export default function DetectPage() {
 
       try {
         if (isVideo) {
-          // Video flow → Flask backend
           const data = await videoApiClient.uploadVideo(file);
           setVideoId(data.video_id);
           setStatus("processing");
         } else {
-          // Image flow → Next.js backend
           const form = new FormData();
           form.append("file", file);
           form.append("type", "image");
@@ -174,7 +164,6 @@ export default function DetectPage() {
           setJobId(data.jobId);
           setStatus("processing");
 
-          // SSE for progress
           eventSourceRef.current?.close();
           const es = new EventSource(`/api/jobs/${data.jobId}/events`);
           eventSourceRef.current = es;
@@ -215,13 +204,29 @@ export default function DetectPage() {
     [toast]
   );
 
-  /* ── Video polling ── */
-
   useEffect(() => {
     if (status !== "processing" || mediaType !== "video" || !videoId) return;
+    if (videoPollStartedAtRef.current == null) videoPollStartedAtRef.current = Date.now();
+
     const check = async () => {
       try {
+        const startedAt = videoPollStartedAtRef.current ?? Date.now();
+        const elapsedMs = Date.now() - startedAt;
+        const maxWaitMs = 10 * 60 * 1000;
+        if (elapsedMs > maxWaitMs) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setStatus("error");
+          toast({
+            title: "Analysis timed out",
+            description: "Video processing is taking longer than expected. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const sd = await videoApiClient.getStatus(videoId);
+        videoPollConsecutiveFailuresRef.current = 0;
+
         if (sd.status === "done") {
           const rd = await videoApiClient.getResult(videoId);
           setVideoResult(rd);
@@ -234,8 +239,20 @@ export default function DetectPage() {
             variant: "destructive",
           });
         }
-      } catch {}
+      } catch (e) {
+        videoPollConsecutiveFailuresRef.current += 1;
+        if (videoPollConsecutiveFailuresRef.current >= 5) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setStatus("error");
+          toast({
+            title: "Unable to check status",
+            description: "The video service is not responding. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
     };
+    check();
     pollRef.current = setInterval(check, 3000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -251,6 +268,8 @@ export default function DetectPage() {
 
   const handleNewUpload = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    videoPollStartedAtRef.current = null;
+    videoPollConsecutiveFailuresRef.current = 0;
     setStatus("idle");
     setMediaType(null);
     setUploadedFile(null);
@@ -261,16 +280,11 @@ export default function DetectPage() {
     setVideoId(null);
   };
 
-  /* ── Derived values ── */
-
   const score = imageResult?.score ?? videoResult?.video_score ?? null;
   const verdict = score !== null ? scoreToVerdict(score) : null;
 
-  /* ── Render ── */
-
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div
           className="absolute top-[-15%] right-[-5%] h-[500px] w-[500px] rounded-full opacity-15 blur-[100px]"
@@ -290,7 +304,6 @@ export default function DetectPage() {
       />
 
       <main className="container relative z-10 py-8 md:py-12">
-        {/* Header */}
         <div className="mb-10 text-center animate-in fade-in slide-in-from-bottom-3 duration-700">
           <h1 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
             DeepFake Detection
@@ -301,7 +314,6 @@ export default function DetectPage() {
           </p>
         </div>
 
-        {/* ── Upload / Progress / Result ── */}
         {status === "idle" && (
           <UploadSection
             onFileSelect={handleFileSelect}
@@ -345,10 +357,6 @@ export default function DetectPage() {
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   Upload Section
-   ═══════════════════════════════════════════════════════════════ */
 
 function UploadSection({
   onFileSelect,
@@ -431,7 +439,6 @@ function UploadSection({
           </div>
         ) : (
           <div className="space-y-5">
-            {/* File info */}
             <Card className="flex items-center gap-4 border-border/50 bg-muted/30 p-4">
               <div
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
@@ -455,7 +462,6 @@ function UploadSection({
               </Button>
             </Card>
 
-            {/* Preview */}
             {previewUrl && (
               <div className="max-w-md mx-auto overflow-hidden rounded-xl border border-border/50">
                 {mediaType === "video" ? (
@@ -491,10 +497,6 @@ function UploadSection({
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   Progress Section
-   ═══════════════════════════════════════════════════════════════ */
 
 function ProgressSection({
   status,
@@ -544,10 +546,6 @@ function ProgressSection({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Result Section
-   ═══════════════════════════════════════════════════════════════ */
-
 function ResultSection({
   score,
   verdict,
@@ -577,7 +575,6 @@ function ResultSection({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* ── Score Card ── */}
       <Card className="overflow-hidden">
         <div className="relative p-8 md:p-10" style={{ background: vc.bg }}>
           <div
@@ -587,7 +584,6 @@ function ResultSection({
             }}
           />
           <div className="relative flex flex-col items-center text-center">
-            {/* Animated ring */}
             <div
               className="relative mb-6 flex h-36 w-36 items-center justify-center rounded-full border-4"
               style={{
@@ -614,7 +610,6 @@ function ResultSection({
           </div>
         </div>
 
-        {/* Quick stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border/40 border-t border-border/40">
           <QuickStat label="Media Type" value={mediaType === "video" ? "Video" : "Image"} />
           <QuickStat
@@ -637,7 +632,6 @@ function ResultSection({
         </div>
       </Card>
 
-      {/* ── Evidence Tabs ── */}
       <Card className="p-6">
         <Tabs defaultValue={frameHeatmaps.length > 0 || (imageResult?.explanations?.heatmap) ? "heatmaps" : "details"} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -657,9 +651,7 @@ function ResultSection({
             </TabsTrigger>
           </TabsList>
 
-          {/* Heatmaps tab */}
           <TabsContent value="heatmaps" className="mt-4 space-y-4">
-            {/* Video heatmaps */}
             {mediaType === "video" && frameHeatmaps.length > 0 && (
               <>
                 <div>
@@ -700,7 +692,6 @@ function ResultSection({
               </>
             )}
 
-            {/* Video — no heatmaps */}
             {mediaType === "video" && frameHeatmaps.length === 0 && (
               <div className="flex flex-col items-center py-12 text-center">
                 <Eye className="mb-3 h-10 w-10 text-muted-foreground/40" />
@@ -710,7 +701,6 @@ function ResultSection({
               </div>
             )}
 
-            {/* Image heatmap */}
             {mediaType === "image" && imageResult?.explanations?.heatmap && (
               <>
                 <div>
@@ -745,7 +735,6 @@ function ResultSection({
             )}
           </TabsContent>
 
-          {/* Timeline tab (video only) */}
           {mediaType === "video" && (
             <TabsContent value="timeline" className="mt-4 space-y-4">
               <div>
@@ -797,7 +786,6 @@ function ResultSection({
             </TabsContent>
           )}
 
-          {/* Details tab */}
           <TabsContent value="details" className="mt-4 space-y-4">
             <div>
               <h3 className="mb-1 font-semibold">Analysis Details</h3>
@@ -830,7 +818,6 @@ function ResultSection({
         </Tabs>
       </Card>
 
-      {/* Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button onClick={onNewUpload} size="lg" className="min-w-44">
           <Upload className="mr-2 h-4 w-4" />
@@ -840,8 +827,6 @@ function ResultSection({
     </div>
   );
 }
-
-/* ── Tiny helpers ── */
 
 function QuickStat({ label, value }: { label: string; value: string }) {
   return (

@@ -22,7 +22,7 @@ class Video(Base):
     storage_path = Column(String(512), nullable=False)
     file_size_bytes = Column(Integer, nullable=True)
     duration_sec = Column(Float, nullable=True)
-    status = Column(String(32), default="pending")  # pending, processing, done, error
+    status = Column(String(32), default="pending")
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -39,7 +39,7 @@ class Prediction(Base):
     id = Column(String(36), primary_key=True)
     video_id = Column(String(36), ForeignKey("videos.id"), nullable=False, unique=True)
     video_score = Column(Float, nullable=False)
-    prediction = Column(String(16), nullable=False)  # real, fake
+    prediction = Column(String(16), nullable=False)
     num_frames = Column(Integer, nullable=True)
     processing_time_sec = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

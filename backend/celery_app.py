@@ -1,19 +1,16 @@
-"""Celery application configuration."""
+"""Celery application entry point."""
 
 import os
 
 import sys
-from pathlib import Path
 from celery import Celery
 
-# Ensure backend directory is in sys.path and PYTHONPATH
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 os.environ["PYTHONPATH"] = backend_dir + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-# Also add current directory to sys.path so 'app' is findable
 if "" not in sys.path:
     sys.path.insert(0, "")
 

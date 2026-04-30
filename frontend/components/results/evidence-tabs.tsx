@@ -23,14 +23,12 @@ export function EvidenceTabs({ result }: EvidenceTabsProps) {
   const [heatmapOpacity, setHeatmapOpacity] = useState([85]);
   const timelineData = useMemo(() => {
     if (result.timeline && result.timeline.length > 0) return result.timeline;
-    // Generate a simple flat timeline when missing
     return Array.from({ length: 20 }).map((_, i) => ({
       t: i,
       score: result.score,
     }));
   }, [result.timeline, result.score]);
 
-  // Consider data URLs, public paths, and empty strings; require non-empty string
   const hasHeatmap = Boolean(
     typeof result.explanations.heatmap === "string" &&
       result.explanations.heatmap.trim().length > 0
@@ -72,13 +70,11 @@ export function EvidenceTabs({ result }: EvidenceTabsProps) {
             </div>
 
             <div className="relative max-w-2xl overflow-hidden rounded-lg border border-border/50 bg-muted/20">
-              {/* Base image */}
               <img
                 src={baseImage}
                 alt="Original media"
                 className="w-full h-auto block object-contain"
               />
-              {/* Heatmap overlay */}
               <img
                 src={result.explanations.heatmap || "/placeholder.svg"}
                 alt="Detection heatmap"

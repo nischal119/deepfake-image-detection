@@ -85,7 +85,6 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        {/* Filters */}
         <Card className="mb-6 p-6">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="relative">
@@ -123,7 +122,6 @@ export default function HistoryPage() {
           </div>
         </Card>
 
-        {/* Results Table */}
         {filteredHistory.length > 0 ? (
           <Card>
             <Table>
@@ -204,7 +202,6 @@ export default function HistoryPage() {
           </Card>
         )}
 
-        {/* Pagination */}
         {filteredHistory.length > 0 && (
           <div className="mt-6 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">

@@ -22,7 +22,7 @@ interface UploadCardProps {
   currentFile: File | null;
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "video/mp4"];
 
 export function UploadCard({
@@ -33,7 +33,6 @@ export function UploadCard({
 }: UploadCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
-  // Removed camera capture functionality per request
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -105,8 +104,6 @@ export function UploadCard({
     [handleFile]
   );
 
-  // Camera capture functions removed
-
   const previewUrl = useMemo(
     () => (currentFile ? URL.createObjectURL(currentFile) : null),
     [currentFile]
@@ -122,7 +119,6 @@ export function UploadCard({
               Select an image or video to analyze for deepfakes
             </p>
           </div>
-          {/* Capture button removed */}
         </div>
 
         {!currentFile ? (
@@ -166,7 +162,6 @@ export function UploadCard({
               <p className="text-xs text-muted-foreground">
                 You can also paste from clipboard
               </p>
-              {/* Webcam hint removed */}
             </div>
           </div>
         ) : (
@@ -246,7 +241,6 @@ export function UploadCard({
         </div>
       </div>
 
-      {/* Capture dialog removed */}
     </Card>
   );
 }

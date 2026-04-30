@@ -1,9 +1,4 @@
-"""
-Celery task: process uploaded video through frame extraction + model inference.
-
-Writes results to PostgreSQL (Video, Prediction, FrameResult).
-Generates gradient-saliency heatmaps for each frame.
-"""
+"""Celery task for video inference and persistence."""
 
 import os
 import sys
@@ -11,20 +6,17 @@ import time
 import uuid
 from pathlib import Path
 
-# Ensure backend is in PYTHONPATH for all sub-processes
 _backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ["PYTHONPATH"] = _backend_root + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 if _backend_root not in sys.path:
     sys.path.insert(0, _backend_root)
 
-# Also add the project root for model inference
 _repo_root = os.path.dirname(_backend_root)
 _video_project = os.path.join(_repo_root, "projects", "deepfake-detector-video")
 if _video_project not in sys.path:
     sys.path.insert(0, _video_project)
 
-# Heatmaps directory lives alongside uploads
 HEATMAP_BASE_DIR = os.path.join(_backend_root, "heatmaps")
 
 from celery_app import celery
@@ -32,9 +24,6 @@ from celery_app import celery
 
 @celery.task(bind=True, max_retries=3)
 def process_video(self, video_id: str):
-    """
-    Extract frames, run inference with saliency heatmaps, save results to DB.
-    """
     database_url = os.environ.get("DATABASE_URL", "postgresql://localhost/deepfake_video")
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -60,10 +49,8 @@ def process_video(self, video_id: str):
             session.commit()
             return {"status": "error", "error": video.error_message}
 
-        # Prepare heatmap output directory for this video
         heatmap_dir = os.path.join(HEATMAP_BASE_DIR, video_id)
 
-        # Run inference with heatmap generation
         from src.deploy.infer_video import predict_video
 
         t0 = time.perf_counter()
@@ -85,10 +72,8 @@ def process_video(self, video_id: str):
         )
         session.add(prediction)
 
-        # Frame results with real heatmap URLs
         heatmap_paths = result.get("heatmap_paths", {})
         for i, score in enumerate(result["frame_scores"]):
-            # Use real heatmap if generated, otherwise empty
             if i in heatmap_paths:
                 heatmap_url = f"/api/video/heatmaps/{video_id}/frame_{i}.png"
             else:
@@ -112,7 +97,7 @@ def process_video(self, video_id: str):
         error_msg = str(e)
         print(f"CRITICAL ERROR processing video {video_id}: {error_msg}", file=sys.stderr)
 
-        # Mark as error in DB using raw psycopg2
+        # Use a direct SQL update to persist failure even if the ORM session is compromised.
         try:
             import psycopg2
             conn = psycopg2.connect(database_url)
@@ -127,7 +112,6 @@ def process_video(self, video_id: str):
         except Exception as sql_e:
             print(f"FAILED raw SQL error update: {sql_e}", file=sys.stderr)
 
-        # Don't retry on fatal errors
         _fatal_errors = [
             "ModuleNotFoundError", "ImportError", "NameError",
             "AttributeError", "FileNotFoundError", "RuntimeError",

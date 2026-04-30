@@ -51,7 +51,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Preferences */}
           <Card className="p-6">
             <h2 className="mb-6 text-xl font-semibold">Preferences</h2>
 
@@ -96,7 +95,6 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Integrations */}
           <Card className="p-6">
             <h2 className="mb-6 text-xl font-semibold">Integrations</h2>
 
@@ -145,7 +143,6 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Privacy */}
           <Card className="p-6 lg:col-span-2">
             <h2 className="mb-4 text-xl font-semibold">Privacy & Data</h2>
             <div className="space-y-4">

@@ -15,7 +15,7 @@ interface VideoUploadCardProps {
   currentFile: File | null;
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_TYPES = ["video/mp4", "video/avi", "video/quicktime", "video/x-matroska", "video/webm"];
 
 export function VideoUploadCard({

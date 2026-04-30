@@ -9,7 +9,6 @@ import { Shield, Upload, Zap, Eye, ArrowRight } from "lucide-react";
 export default function HomePage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Animated background orbs */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div
           className="absolute top-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full opacity-20 blur-[120px]"
@@ -34,7 +33,6 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Subtle grid pattern */}
       <div
         className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]"
         style={{
@@ -44,7 +42,6 @@ export default function HomePage() {
         }}
       />
 
-      {/* Hero Section */}
       <section className="relative z-10">
         <div className="container py-24 md:py-36">
           <div className="mx-auto max-w-4xl text-center">
@@ -82,7 +79,6 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Hero visual */}
             <div className="mt-20 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-500">
               <div className="relative rounded-2xl border border-border/30 bg-card/30 p-3 backdrop-blur-sm shadow-2xl shadow-primary/5">
                 <div
@@ -103,7 +99,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How It Works Section */}
       <section className="relative z-10 border-t border-border/20 py-24">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center mb-16">
@@ -168,7 +163,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="relative z-10 border-t border-border/20 py-16">
         <div className="container">
           <div className="mx-auto max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -195,7 +189,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="relative z-10 border-t border-border/20 py-24">
         <div className="container">
           <Card className="relative overflow-hidden border-border/30 bg-card/50 p-12 text-center backdrop-blur-sm max-w-3xl mx-auto">
@@ -224,7 +217,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-border/20 py-12">
         <div className="container">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
@@ -239,7 +231,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* CSS Animations */}
       <style jsx global>{`
         @keyframes floatOrb {
           0%, 100% { transform: translate(0, 0) scale(1); }
