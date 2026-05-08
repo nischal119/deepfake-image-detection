@@ -1,10 +1,9 @@
- 
 
 from __future__ import annotations
 
 import argparse
 import csv
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from math import inf
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
@@ -18,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
 from tqdm.auto import tqdm
 
-from src.models.video_r3d import R3D18VideoClassifier
+from src.models.video_lstm import ResNetLSTMVideoClassifier
 
 
 HERE = Path(__file__).resolve()
@@ -67,13 +66,7 @@ def collect_labeled_videos(root: Path) -> Tuple[List[Tuple[Path, int]], List[Pat
 
 
 class VideoClipDataset(Dataset):
-    """
-    Sample fixed-length clips (N frames) from videos for 3D CNN input.
-
-    Each sample returns (C, T, H, W) so that DataLoader batches to (B, C, T, H, W)
-    for R3D input.
-    """
-
+ 
     def __init__(
         self,
         samples: Sequence[Tuple[Path, int]],
@@ -111,13 +104,11 @@ class VideoClipDataset(Dataset):
 
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
         if frame_count < self.clip_length:
-              
             frame_idxs = list(range(frame_count))
             while len(frame_idxs) < self.clip_length:
                 frame_idxs.append(max(0, frame_count - 1))
             frame_idxs = frame_idxs[: self.clip_length]
         else:
-              
             lin = np.linspace(0, frame_count - 1, self.clip_length)
             frame_idxs = np.round(lin).astype(int).tolist()
 
@@ -126,16 +117,19 @@ class VideoClipDataset(Dataset):
             cap.set(cv2.CAP_PROP_POS_FRAMES, fi)
             ok, frame = cap.read()
             if not ok or frame is None:
-                raise RuntimeError(f"Failed to read frame {fi} from {path}")
+                continue
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_t = self.transform(frame)
             frames.append(frame_t)
 
         cap.release()
+        
+        if len(frames) < self.clip_length:
+             while len(frames) < self.clip_length:
+                 frames.append(frames[-1] if frames else torch.zeros(3, self.frame_size, self.frame_size))
 
-          
-        clip = torch.stack(frames, dim=0)    
-        clip = clip.permute(1, 0, 2, 3)     
+        clip = torch.stack(frames, dim=0)
+        clip = clip.permute(1, 0, 2, 3)
 
         return clip, label
 
@@ -144,48 +138,35 @@ class VideoClipDataset(Dataset):
 class TrainConfig:
     data_root: Path
     epochs: int = 15
-    batch_size: int = 8
+    batch_size: int = 4
     lr: float = 1e-4
     val_fraction: float = 0.2
-    num_workers: int = 2
+    num_workers: int = 0
     max_samples: Optional[int] = 400
     clip_length: int = 16
     frame_size: int = 112
     patience: int = 4
     pretrained: bool = True
-    model_path: Path = PROJECT_ROOT / "models" / "video_r3d18.pth"
-    log_csv_path: Path = PROJECT_ROOT / "logs" / "video_r3d18_training_log.csv"
+    model_path: Path = PROJECT_ROOT / "models" / "video_lstm.pth"
+    log_csv_path: Path = PROJECT_ROOT / "logs" / "video_lstm_training_log.csv"
 
 
 def make_dataloaders(cfg: TrainConfig) -> Tuple[DataLoader, DataLoader]:
     labeled_samples, unlabeled = collect_labeled_videos(cfg.data_root)
     print(f"Total labeled videos:   {len(labeled_samples)}")
-    print(f"Total unlabeled videos: {len(unlabeled)}")
-
-    if not labeled_samples:
-        raise SystemExit(
-            "No labeled videos were inferred. Adjust LABEL_PATTERNS or organize dataset."
-        )
-
-    print("Sample labeled paths:")
-    for p, lab in labeled_samples[:5]:
-        print(f"  {lab} -> {p}")
-
+    
     if cfg.max_samples is not None and len(labeled_samples) > cfg.max_samples:
         labeled_samples = labeled_samples[: cfg.max_samples]
-        print(f"Subsampled to {len(labeled_samples)} labeled videos.")
 
     full_dataset = VideoClipDataset(
         labeled_samples,
         clip_length=cfg.clip_length,
         frame_size=cfg.frame_size,
     )
-    print(f"Final dataset size: {len(full_dataset)}")
-
+    
     val_size = int(len(full_dataset) * cfg.val_fraction)
     train_size = len(full_dataset) - val_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
-    print(f"Train size: {train_size}, Val size: {val_size}")
 
     train_loader = DataLoader(
         train_dataset,
@@ -234,7 +215,6 @@ def run_epoch(
             if is_train and optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
                 optimizer.step()
 
         batch_size = clips.size(0)
@@ -248,12 +228,6 @@ def run_epoch(
         probs = torch.softmax(logits, dim=1)[:, 1]
         all_probs.append(probs.detach().cpu().numpy())
         all_targets.append(targets.detach().cpu().numpy())
-
-        if seen_samples > 0:
-            loop.set_postfix(
-                loss=f"{running_loss / seen_samples:.4f}",
-                acc=f"{acc_sum / seen_samples:.3f}",
-            )
 
     avg_loss = running_loss / len(loader.dataset)
     acc = acc_sum / len(loader.dataset)
@@ -282,22 +256,27 @@ def append_log_row(csv_path: Path, row: dict) -> None:
 
 def train(cfg: TrainConfig) -> None:
     train_loader, val_loader = make_dataloaders(cfg)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+        
     print("Using device:", device)
 
-    model = R3D18VideoClassifier(
+    model = ResNetLSTMVideoClassifier(
         num_classes=2,
         pretrained=cfg.pretrained,
-        input_clip_length=cfg.clip_length,
     ).to(device)
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
 
     best_metric = -inf
-    epochs_no_improve = 0
 
     for epoch in range(1, cfg.epochs + 1):
-        model.train()
         train_loss, train_acc, train_auc = run_epoch(
             train_loader, model, criterion, device,
             phase="train", optimizer=optimizer,
@@ -314,97 +293,32 @@ def train(cfg: TrainConfig) -> None:
             "epoch": epoch,
             "train_loss": train_loss,
             "train_acc": train_acc,
-            "train_auc": train_auc,
             "val_loss": val_loss,
             "val_acc": val_acc,
-            "val_auc": val_auc,
         }
         append_log_row(cfg.log_csv_path, log_row)
 
-        print(
-            f"Epoch {epoch:02d}/{cfg.epochs} | "
-            f"train_loss={train_loss:.4f}, train_acc={train_acc:.3f}, train_auc={train_auc:.3f} | "
-            f"val_loss={val_loss:.4f}, val_acc={val_acc:.3f}, val_auc={val_auc:.3f}"
-        )
+        print(f"Epoch {epoch:02d} | val_loss={val_loss:.4f}, val_acc={val_acc:.3f}")
 
         if metric > best_metric:
             best_metric = metric
-            epochs_no_improve = 0
             ensure_parent_dir(cfg.model_path)
-            torch.save({
-                "model_state": model.state_dict(),
-                "config": asdict(cfg),
-                "epoch": epoch,
-                "val_loss": val_loss,
-                "val_acc": val_acc,
-                "val_auc": val_auc,
-            }, cfg.model_path)
-            print(f"  -> Saved new best model to {cfg.model_path} (metric={metric:.4f})")
-        else:
-            epochs_no_improve += 1
-            print(f"  -> No improvement for {epochs_no_improve} epoch(s)")
-
-        if epochs_no_improve >= cfg.patience:
-            print(
-                f"Early stopping triggered (patience={cfg.patience}, "
-                f"best_metric={best_metric:.4f})."
-            )
-            break
-
-
-def parse_args() -> TrainConfig:
-    parser = argparse.ArgumentParser(
-        description="Train R3D-18 3D video deepfake classifier."
-    )
-    parser.add_argument("--data-root", type=str, default=None)
-    parser.add_argument("--epochs", type=int, default=15)
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--val-fraction", type=float, default=0.2)
-    parser.add_argument("--num-workers", type=int, default=2)
-    parser.add_argument("--max-samples", type=int, default=400)
-    parser.add_argument("--clip-length", type=int, default=16)
-    parser.add_argument("--frame-size", type=int, default=112)
-    parser.add_argument("--patience", type=int, default=4)
-    parser.add_argument("--no-pretrained", action="store_true")
-    parser.add_argument(
-        "--model-path",
-        type=str,
-        default=str(PROJECT_ROOT / "models" / "video_r3d18.pth"),
-    )
-    parser.add_argument(
-        "--log-csv",
-        type=str,
-        default=str(PROJECT_ROOT / "logs" / "video_r3d18_training_log.csv"),
-    )
-
-    args = parser.parse_args()
-    data_root = default_data_root() if args.data_root is None else Path(args.data_root).expanduser().resolve()
-    if not data_root.exists():
-        raise SystemExit(f"Data root does not exist: {data_root}")
-
-    return TrainConfig(
-        data_root=data_root,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        lr=args.lr,
-        val_fraction=args.val_fraction,
-        num_workers=args.num_workers,
-        max_samples=args.max_samples,
-        clip_length=args.clip_length,
-        frame_size=args.frame_size,
-        patience=args.patience,
-        pretrained=not args.no_pretrained,
-        model_path=Path(args.model_path).expanduser().resolve(),
-        log_csv_path=Path(args.log_csv).expanduser().resolve(),
-    )
+            torch.save({"model_state": model.state_dict()}, cfg.model_path)
+            print(f"  -> Saved model to {cfg.model_path}")
 
 
 def main() -> None:
-    cfg = parse_args()
-    print("Training configuration:")
-    for k, v in asdict(cfg).items():
-        print(f"  {k}: {v}")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-root", type=str, default=None)
+    parser.add_argument("--epochs", type=int, default=5)
+    args = parser.parse_args()
+    
+    data_root = Path(args.data_root).expanduser().resolve() if args.data_root else default_data_root()
+    
+    cfg = TrainConfig(
+        data_root=data_root,
+        epochs=args.epochs,
+    )
     train(cfg)
 
 

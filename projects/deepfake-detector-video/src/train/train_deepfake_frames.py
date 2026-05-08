@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import cv2
-import numpy as np
 import torch
-from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import models, transforms
@@ -24,15 +22,15 @@ def default_data_root() -> Path:
     - this file: DeepFake Detector/projects/deepfake-detector-video/src/train/train_deepfake_frames.py
     """
     here = Path(__file__).resolve()
-    # .../DeepFake Detector/projects/deepfake-detector-video/src/train/train_deepfake_frames.py
-    # parents[0]=train, [1]=src, [2]=deepfake-detector-video, [3]=projects, [4]=DeepFake Detector
+      
+      
     repo_root = here.parents[4]
     return repo_root / "deepfake-videos"
 
 
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
 
-# Map lowercase substring -> numeric label
+  
 LABEL_PATTERNS = {
     "real": 0,
     "original": 0,
@@ -113,7 +111,7 @@ class SingleFrameVideoDataset(Dataset):
 class ResNetFrameClassifier(nn.Module):
     def __init__(self, num_classes: int = 2):
         super().__init__()
-        # Use ImageNet-pretrained ResNet-18 (requires network + valid SSL certs).
+          
         backbone = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
         in_features = backbone.fc.in_features
         backbone.fc = nn.Identity()
@@ -173,7 +171,7 @@ def run_epoch(
         batch_acc = (preds == targets).float().mean().item()
         acc_sum += batch_acc * batch_size
 
-        # Live progress update
+          
         if seen_samples > 0:
             avg_loss_so_far = running_loss / seen_samples
             avg_acc_so_far = acc_sum / seen_samples

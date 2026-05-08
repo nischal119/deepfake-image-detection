@@ -23,10 +23,10 @@ PROJECT_ROOT = HERE.parents[2]
 MODELS_DIR = PROJECT_ROOT / "models"
 DEPLOY_DIR = PROJECT_ROOT / "deploy"
 
-# Sensitivity: lower temperature = more decisive/sensitive predictions
+  
 SENSITIVITY_TEMPERATURE = 0.5
 
-# Default preprocess for ResNet-based frame model
+  
 DEFAULT_TRANSFORM = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
@@ -38,9 +38,9 @@ DEFAULT_TRANSFORM = transforms.Compose([
 ])
 
 
-# ---------------------------------------------------------------------------
-# Saliency / Heatmap Generation
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def generate_saliency_map(
     model: Union[torch.jit.ScriptModule, torch.nn.Module],
@@ -64,7 +64,7 @@ def generate_saliency_map(
         if tensor.grad is None:
             return None
 
-        # Max absolute gradient across RGB channels → pixel importance
+          
         saliency = tensor.grad.abs().squeeze().max(dim=0)[0].cpu().numpy()
         saliency = cv2.GaussianBlur(saliency, (21, 21), 0)
 
@@ -86,9 +86,9 @@ def generate_saliency_map(
         return None
 
 
-# ---------------------------------------------------------------------------
-# Frame Extraction
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def extract_frames(
     video_path: Path,
@@ -127,9 +127,9 @@ def extract_frames(
     return frames
 
 
-# ---------------------------------------------------------------------------
-# Model Loading
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def load_torchscript_model(path: Path, device: torch.device) -> torch.jit.ScriptModule:
     model = torch.jit.load(str(path), map_location=device)
@@ -156,9 +156,9 @@ def load_native_model(path: Path, device: torch.device) -> torch.nn.Module:
     return model
 
 
-# ---------------------------------------------------------------------------
-# Inference helpers (with temperature scaling)
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def infer_torchscript(
     model: torch.jit.ScriptModule,
@@ -212,9 +212,9 @@ def infer_onnx(
     return probs
 
 
-# ---------------------------------------------------------------------------
-# Main public API
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def predict_video(
     video_path: Union[str, Path],
@@ -267,7 +267,7 @@ def predict_video(
         model = load_native_model(model_path, device)
         frame_scores = infer_native(model, frames, DEFAULT_TRANSFORM, device, batch_size)
 
-    # Generate saliency heatmaps
+      
     heatmap_paths: Dict[int, str] = {}
     if heatmap_dir and model is not None:
         hm_dir = Path(heatmap_dir)
@@ -280,7 +280,7 @@ def predict_video(
                 heatmap_paths[i] = str(out_path)
 
     video_score = float(np.mean(frame_scores))
-    # Lowered threshold for higher sensitivity
+      
     prediction = "fake" if video_score >= 0.35 else "real"
 
     return {
@@ -294,9 +294,9 @@ def predict_video(
     }
 
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
+  
+  
+  
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run deepfake inference on a video.")

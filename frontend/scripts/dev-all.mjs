@@ -203,7 +203,7 @@ function loadEnvFileIntoProcess(envPath) {
   const raw = fs.readFileSync(envPath, "utf8")
   for (const line0 of raw.split("\n")) {
     const line = line0.trim()
-    if (!line || line.startsWith("#")) continue
+    if (!line || line.startsWith("  
     const eqIdx = line.indexOf("=")
     if (eqIdx === -1) continue
     const key = line.slice(0, eqIdx).trim()
@@ -249,6 +249,26 @@ async function ensureRedisRunning() {
   if (!ok) throw new Error("[dev-all] Redis did not become ready on :6379 in time.")
 }
 
+function removeStalePostgresPid(pgFormula) {
+  const dataDirs = [
+    `/opt/homebrew/var/${pgFormula}`,
+    `/usr/local/var/${pgFormula}`,
+    `/opt/homebrew/var/postgres`,
+    `/usr/local/var/postgres`,
+  ]
+  for (const dir of dataDirs) {
+    const pidPath = path.join(dir, "postmaster.pid")
+    if (fs.existsSync(pidPath)) {
+      console.log(`[dev-all] Found potential stale PID file at ${pidPath}. Removing...`)
+      try {
+        fs.unlinkSync(pidPath)
+      } catch (e) {
+        console.warn(`[dev-all] Failed to remove ${pidPath}: ${e.message}`)
+      }
+    }
+  }
+}
+
 async function tryStartPostgres() {
   if (await isPortOpen("127.0.0.1", postgresPort, 1500)) return true
 
@@ -265,10 +285,43 @@ async function tryStartPostgres() {
   const brew = which("brew")
   if (!brew) return false
 
-  const pgFormula = "postgresql@16"
-  spawnSync("brew", ["services", "start", pgFormula], { stdio: "inherit" })
+  // Try to find an installed Postgres formula
+  const possibleFormulas = ["postgresql@16", "postgresql@15", "postgresql@14", "postgresql"]
+  let pgFormula = null
+  
+  for (const formula of possibleFormulas) {
+    const check = spawnSync("brew", ["list", "--versions", formula], { encoding: "utf8" })
+    if (check.status === 0) {
+      pgFormula = formula
+      break
+    }
+  }
 
-  const ok = await waitForPort("127.0.0.1", postgresPort, 60000)
+  if (!pgFormula) {
+    console.warn("[dev-all] No PostgreSQL formula found via brew. Please install it with 'brew install postgresql@16'")
+    return false
+  }
+
+  console.log(`[dev-all] Using ${pgFormula}...`)
+  
+  // Check if it's in error state
+  const list = spawnSync("brew", ["services", "list"], { encoding: "utf8" })
+  if (list.stdout && list.stdout.includes(pgFormula) && list.stdout.includes("error")) {
+    console.log(`[dev-all] ${pgFormula} is in error state. Attempting restart...`)
+    spawnSync("brew", ["services", "restart", pgFormula], { stdio: "inherit" })
+  } else {
+    spawnSync("brew", ["services", "start", pgFormula], { stdio: "inherit" })
+  }
+
+  let ok = await waitForPort("127.0.0.1", postgresPort, 5000)
+  if (ok) return true
+
+  // If still not up, check for stale PID file
+  console.log(`[dev-all] Postgres did not start within 5s. Checking for stale PID files...`)
+  removeStalePostgresPid(pgFormula)
+  spawnSync("brew", ["services", "restart", pgFormula], { stdio: "inherit" })
+
+  ok = await waitForPort("127.0.0.1", postgresPort, 55000)
   return ok
 }
 

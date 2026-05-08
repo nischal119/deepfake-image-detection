@@ -1,9 +1,6 @@
-"""R3D-18 video classifier for binary deepfake detection."""
+ 
 
 from __future__ import annotations
-
-from pathlib import Path
-from typing import Optional
 
 import torch
 from torch import nn
@@ -11,17 +8,7 @@ from torchvision.models.video import r3d_18, R3D_18_Weights
 
 
 class R3D18VideoClassifier(nn.Module):
-    """
-    3D ResNet-18 for video deepfake classification.
-
-    Uses torchvision.models.video.r3d_18 with ImageNet Kinetics pretrained weights.
-    Replaces the final fc layer for binary (real/fake) classification.
-
-    Input: (B, C, T, H, W) — batch, channels, time (frames), height, width.
-    Typical: (B, 3, 16, 112, 112) or (B, 3, 16, 224, 224).
-
-    Output: (B, num_classes) logits.
-    """
+  
 
     def __init__(
         self,
@@ -38,7 +25,7 @@ class R3D18VideoClassifier(nn.Module):
         else:
             backbone = r3d_18(weights=None)
 
-        # r3d_18 has .fc as final layer
+          
         in_features = backbone.fc.in_features
         backbone.fc = nn.Identity()
         self.backbone = backbone

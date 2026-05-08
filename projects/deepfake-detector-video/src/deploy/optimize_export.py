@@ -21,10 +21,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import torch
-from torchvision import models, transforms
+from torchvision import models
 
 HERE = Path(__file__).resolve()
 PROJECT_ROOT = HERE.parents[2]
@@ -33,7 +33,7 @@ DEPLOY_DIR = PROJECT_ROOT / "deploy"
 
 
 def _build_frame_model(ckpt_path: Path) -> torch.nn.Module:
-    """Build ResNet50 frame classifier from checkpoint."""
+     
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     state = ckpt.get("model_state", ckpt)
 
@@ -62,7 +62,7 @@ def export_torchscript(
     example_input: torch.Tensor,
     optimize: bool = True,
 ) -> Path:
-    """Export model to TorchScript (traced)."""
+     
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     traced = torch.jit.trace(model, example_input, optimize=optimize)
@@ -77,7 +77,7 @@ def export_onnx(
     opset_version: int = 14,
     dynamic_axes: Optional[dict] = None,
 ) -> Path:
-    """Export model to ONNX."""
+     
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     dynamic_axes = dynamic_axes or {"input": {0: "batch"}, "output": {0: "batch"}}
@@ -94,12 +94,12 @@ def export_onnx(
 
 
 def apply_fp16(model: torch.nn.Module) -> torch.nn.Module:
-    """Convert model to FP16 (half precision)."""
+     
     return model.half()
 
 
 def apply_dynamic_quantization(model: torch.nn.Module) -> torch.nn.Module:
-    """Apply dynamic quantization to linear/conv layers (int8 activations, fp32 compute in some backends)."""
+     
     return torch.quantization.quantize_dynamic(
         model,
         {torch.nn.Linear, torch.nn.Conv2d},

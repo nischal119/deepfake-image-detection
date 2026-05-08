@@ -1,4 +1,3 @@
-"""Video upload and results API."""
 
 import uuid
 from pathlib import Path
@@ -20,10 +19,7 @@ def allowed_file(filename: str) -> bool:
 @video_api.route("/upload", methods=["POST"])
 @limiter.limit("5 per minute")
 def upload_video():
-    """
-    Accept video file, save to storage, enqueue Celery job.
-    Rate-limited; enforces max file size.
-    """
+   
 
     if "video" not in request.files and "file" not in request.files:
         return jsonify({"error": "No video file provided"}), 400
@@ -83,7 +79,7 @@ def upload_video():
 
 @video_api.route("/status/<video_id>", methods=["GET"])
 def video_status(video_id: str):
-    """Return processing status and partial results."""
+
     from flask import g
     session = g.db_session
     video = session.query(Video).filter_by(id=video_id).first()
@@ -108,7 +104,7 @@ def video_status(video_id: str):
 
 @video_api.route("/result/<video_id>", methods=["GET"])
 def video_result(video_id: str):
-    """Return full result: frame scores, heatmap URLs, video score."""
+     
     from flask import g
     session = g.db_session
     video = session.query(Video).filter_by(id=video_id).first()
@@ -142,7 +138,7 @@ def video_result(video_id: str):
 
 @video_api.route("/heatmaps/<video_id>/<filename>", methods=["GET"])
 def serve_heatmap(video_id: str, filename: str):
-    """Serve generated saliency heatmap images."""
+     
     from flask import send_from_directory
     heatmap_dir = Path(current_app.root_path).parent / "heatmaps" / video_id
     if not heatmap_dir.exists():
@@ -152,7 +148,7 @@ def serve_heatmap(video_id: str, filename: str):
 
 @video_api.route("/history", methods=["GET"])
 def get_history():
-    """Return a list of processed videos for history display."""
+     
     from flask import g
     session = g.db_session
 

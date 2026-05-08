@@ -13,7 +13,7 @@ Emits results/video_eval.csv with per-video predictions and metrics.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -79,11 +79,11 @@ def aggregate_to_video_level(
         video_label = int(round(labels.mean()))
         frame_probs = g["frame_prob"].values.astype(float)
 
-        # (a) Average of frame-level probabilities
+          
         prob_avg = float(frame_probs.mean())
         pred_avg = int(prob_avg >= 0.5)
 
-        # (b) Majority vote (per-frame hard classifications)
+          
         hard_preds = (frame_probs >= 0.5).astype(int)
         prob_majority = float(hard_preds.mean())
         pred_majority = int(prob_majority >= 0.5)
@@ -100,7 +100,7 @@ def aggregate_to_video_level(
 
     video_df = pd.DataFrame(rows)
 
-    # (c) Temporal model output (3D CNN / LSTM)
+      
     if temporal_df is not None:
         if not {"video_id", "temporal_prob"} <= set(temporal_df.columns):
             raise ValueError("temporal_df must have columns: video_id, temporal_prob")
@@ -110,7 +110,7 @@ def aggregate_to_video_level(
         video_df["prob_temporal"] = video_df["temporal_prob"].astype(float)
         video_df["pred_temporal"] = (video_df["prob_temporal"] >= 0.5).astype(int)
 
-        # (d) Ensemble: weighted average of (a) and (c)
+          
         w = float(ensemble_weight)
         video_df["prob_ensemble"] = np.where(
             video_df["prob_temporal"].notna(),

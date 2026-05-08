@@ -1,5 +1,4 @@
 import gc
-import os
 import subprocess
 import sys
 import warnings
@@ -7,10 +6,7 @@ from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
-import time
-
 import evaluate
-import numpy as np
 import pandas as pd
 import torch
 from datasets import ClassLabel, Dataset, Image
@@ -32,7 +28,7 @@ from transformers import (
     ViTImageProcessor,
 )
 
-# Allow loading truncated images
+  
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
@@ -41,16 +37,13 @@ def in_colab() -> bool:
 
 
 def ensure_kaggle_dataset_colab(data_dir: Path) -> Path:
-    """
-    In Colab: download and extract the dataset into data_dir.
-    Returns the extracted dataset root (data_dir / "Dataset").
-    """
+
     zip_path = data_dir / "deepfake-and-real-images.zip"
     extracted_dir = data_dir / "Dataset"
 
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # Install kaggle if missing
+      
     try:
         subprocess.run(
             ["kaggle", "-h"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -58,9 +51,9 @@ def ensure_kaggle_dataset_colab(data_dir: Path) -> Path:
     except FileNotFoundError:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "-q", "kaggle"]
-        )  # quiet install
+        )    
 
-    # Prepare kaggle creds
+      
     kaggle_json_src = Path("/content/kaggle.json")
     kaggle_dir = Path("/root/.kaggle")
     if kaggle_json_src.exists():
@@ -105,7 +98,7 @@ def resolve_dataset_root() -> Path:
     if in_colab():
         base = ensure_kaggle_dataset_colab(Path("/content/deepfake_dataset"))
         return base
-    # Local/non-Colab
+      
     local = Path("Dataset")
     if not local.exists():
         raise FileNotFoundError(
@@ -118,11 +111,11 @@ def build_dataframe(base_path: Path) -> pd.DataFrame:
     print("Scanning dataset directory...")
     file_names, labels = [], []
 
-    # Get all jpg files first
+      
     all_files = list(base_path.rglob("*.jpg"))
     print(f"Found {len(all_files)} image files")
 
-    # Process with progress bar
+      
     for file in tqdm(all_files, desc="📊 Building dataset", unit="images"):
         labels.append(file.parent.name)
         file_names.append(str(file))
@@ -137,16 +130,16 @@ def main():
     print("Starting DeepFake Detector Training Pipeline")
     print("=" * 50)
 
-    # Step 1: Dataset setup
+      
     print("\nStep 1: Setting up dataset...")
     dataset_root = resolve_dataset_root()
-    print(f"📍 Using dataset at: {dataset_root.resolve()}")
+    print(f"Using dataset at: {dataset_root.resolve()}")
 
-    # Step 2: Build dataframe
+      
     print("\nStep 2: Building dataset dataframe...")
     df = build_dataframe(dataset_root)
 
-    # Step 3: Balance dataset
+      
     print("\nStep 3: Balancing dataset...")
     print("Applying RandomOverSampler...")
     y = df[["label"]]
@@ -157,12 +150,12 @@ def main():
     df["label"] = y_resampled
     del y_resampled, df_x
     gc.collect()
-    print(f"✅ Dataset balanced: {df.shape[0]} samples")
-    print(f"📈 Balanced distribution:\n{df['label'].value_counts()}")
+    print(f"Dataset balanced: {df.shape[0]} samples")
+    print(f"Balanced distribution:\n{df['label'].value_counts()}")
 
-    # Step 4: Create HuggingFace dataset
-    print("\n🤗 Step 4: Creating HuggingFace dataset...")
-    with tqdm(total=3, desc="🔄 Processing dataset") as pbar:
+      
+    print("\nStep 4: Creating HuggingFace dataset...")
+    with tqdm(total=3, desc="Processing dataset") as pbar:
         dataset = Dataset.from_pandas(df).cast_column("image", Image())
         pbar.update(1)
 
@@ -181,33 +174,33 @@ def main():
         dataset = dataset.cast_column("label", class_labels)
         pbar.update(1)
 
-    print("✅ HuggingFace dataset created")
+    print("HuggingFace dataset created")
 
-    # Step 5: Split dataset
-    print("\n✂️  Step 5: Splitting dataset...")
-    print("🔄 Creating train/test split (60/40)...")
+      
+    print("\nStep 5: Splitting dataset...")
+    print("Creating train/test split (60/40)...")
     dataset = dataset.train_test_split(
         test_size=0.4, shuffle=True, stratify_by_column="label"
     )
     train_data = dataset["train"]
     test_data = dataset["test"]
 
-    print(f"✅ Split complete:")
-    print(f"   📚 Training samples: {len(train_data)}")
-    print(f"   🧪 Test samples: {len(test_data)}")
+    print(f"Split complete:")
+    print(f"   Training samples: {len(train_data)}")
+    print(f"   Test samples: {len(test_data)}")
 
-    # Step 6: Load model and processor
-    print("\n🤖 Step 6: Loading model and processor...")
+      
+    print("\nStep 6: Loading model and processor...")
     model_str = "dima806/deepfake_vs_real_image_detection"
-    print("🔄 Loading ViT processor...")
+    print("Loading ViT processor...")
     processor = ViTImageProcessor.from_pretrained(model_str)
 
     image_mean, image_std = processor.image_mean, processor.image_std
     size = processor.size["height"]
-    print(f"📏 Image size: {size}")
+    print(f"Image size: {size}")
 
-    # Step 7: Setup transforms
-    print("\n🔄 Step 7: Setting up image transforms...")
+      
+    print("\nStep 7: Setting up image transforms...")
     normalize = Normalize(mean=image_mean, std=image_std)
 
     _train_transforms = Compose(
@@ -246,17 +239,17 @@ def main():
 
     train_data.set_transform(train_transforms)
     test_data.set_transform(val_transforms)
-    print("✅ Transforms applied")
+    print("Transforms applied")
 
-    # Step 8: Setup model and training
-    print("\n🏗️  Step 8: Setting up model and training...")
+      
+    print("\nStep 8: Setting up model and training...")
 
     def collate_fn(examples):
         pixel_values = torch.stack([example["pixel_values"] for example in examples])
         labels = torch.tensor([example["label"] for example in examples])
         return {"pixel_values": pixel_values, "labels": labels}
 
-    print("🔄 Loading ViT model...")
+    print("Loading ViT model...")
     model = ViTForImageClassification.from_pretrained(
         model_str,
         num_labels=2,
@@ -264,10 +257,10 @@ def main():
         label2id=label2id,
     )
     print(
-        f"✅ Model loaded: {model.num_parameters(only_trainable=True)/1e6:.1f}M parameters"
+        f"Model loaded: {model.num_parameters(only_trainable=True)/1e6:.1f}M parameters"
     )
 
-    print("🔄 Setting up metrics...")
+    print("Setting up metrics...")
     metric = evaluate.load("accuracy")
 
     def compute_metrics(eval_pred):
@@ -280,7 +273,7 @@ def main():
             ]
         }
 
-    print("🔄 Configuring training arguments...")
+    print("Configuring training arguments...")
     args = TrainingArguments(
         output_dir="deepfake_vs_real_image_detection",
         logging_dir="./logs",
@@ -298,7 +291,7 @@ def main():
         remove_unused_columns=False,
     )
 
-    print("🔄 Creating trainer...")
+    print("Creating trainer...")
     trainer = Trainer(
         model=model,
         args=args,
@@ -307,18 +300,18 @@ def main():
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
     )
-    print("✅ Trainer ready")
+    print("Trainer ready")
 
-    # Step 9: Training
-    print("\n🎯 Step 9: Starting training...")
-    print("🔥 Training for 2 epochs...")
+      
+    print("\nStep 9: Starting training...")
+    print("Training for 2 epochs...")
     trainer.train()
-    print("✅ Training completed!")
+    print("Training completed!")
 
-    # Step 10: Evaluation
-    print("\n📊 Step 10: Evaluating model...")
+      
+    print("\nStep 10: Evaluating model...")
     results = trainer.evaluate()
-    print("🎉 Final Results:")
+    print("Final Results:")
     for key, value in results.items():
         print(f"   {key}: {value:.4f}")
 

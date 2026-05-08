@@ -10,7 +10,7 @@ from typing import List, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import roc_auc_score
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import models, transforms
@@ -18,9 +18,9 @@ from tqdm.auto import tqdm
 
 
 HERE = Path(__file__).resolve()
-# .../DeepFake Detector/projects/deepfake-detector-video/src/train/train_frame_model.py
+  
 REPO_ROOT = HERE.parents[4]
-PROJECT_ROOT = HERE.parents[2]  # projects/deepfake-detector-video
+PROJECT_ROOT = HERE.parents[2]    
 
 
 def default_data_root() -> Path:
@@ -36,7 +36,7 @@ def default_data_root() -> Path:
 
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
 
-# Map lowercase substring -> numeric label
+  
 LABEL_PATTERNS = {
     "real": 0,
     "original": 0,
@@ -249,7 +249,7 @@ def run_epoch(
         batch_acc = (preds == targets).float().mean().item()
         acc_sum += batch_acc * batch_size
 
-        # For AUC (val only, but computing in both phases is cheap enough)
+          
         probs = torch.softmax(logits, dim=1)[:, 1]
         all_probs.append(probs.detach().cpu().numpy())
         all_targets.append(targets.detach().cpu().numpy())
@@ -304,7 +304,7 @@ def train(cfg: TrainConfig) -> None:
     epochs_no_improve = 0
 
     for epoch in range(1, cfg.epochs + 1):
-        # Train phase
+          
         model.train()
         train_loss, train_acc, train_auc = run_epoch(
             train_loader,
@@ -315,13 +315,13 @@ def train(cfg: TrainConfig) -> None:
             optimizer=optimizer,
         )
 
-        # Val phase
+          
         with torch.no_grad():
             val_loss, val_acc, val_auc = run_epoch(
                 val_loader, model, criterion, device, phase="val", optimizer=None
             )
 
-        # Choose metric for early stopping / checkpointing
+          
         metric = val_auc if not np.isnan(val_auc) else val_acc
 
         log_row = {

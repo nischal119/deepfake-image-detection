@@ -1,4 +1,3 @@
-"""Flask application factory."""
 
 from flask import Flask
 

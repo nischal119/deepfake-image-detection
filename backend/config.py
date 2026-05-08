@@ -1,4 +1,4 @@
-"""Flask and Celery configuration."""
+
 
 import os
 from pathlib import Path

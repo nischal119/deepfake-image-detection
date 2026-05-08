@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+  
 set -euo pipefail
 
 echo "[init-multi-db] Ensuring deepfake_video DB exists..."

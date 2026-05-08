@@ -1,4 +1,4 @@
-"""Evaluation utilities for video deepfake detection."""
+ 
 
 from .video_scoring import (
     VideoMetrics,

@@ -23,5 +23,5 @@ deepfake-videos-full
 *.pyc
 *.log
 
-# Dev orchestration artifacts
+  
 frontend/.cache/dev-all/

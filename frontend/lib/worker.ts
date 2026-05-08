@@ -81,49 +81,71 @@ export function ensureWorkerStarted() {
 
         // When reaching analyzing step for first time, run external analyzer once
         if (nextStatus === "analyzing" && job.step !== "Analyzing") {
+          // Optional override: some environments provide a full command string.
+          // But the worker must still run with sane defaults when it is missing.
           const cmd = process.env.PYTHON_PREDICT_CMD; // e.g. "../.venv/bin/python ../inference/infer_vit.py --input {file}"
-          if (cmd) {
-            // Resolve python binary and script path safely (no shell quoting issues)
-            const pythonBin =
-              process.env.PYTHON_BIN ||
-              path.join(process.cwd(), "..", ".venv", "bin", "python");
-            // Try to locate infer_vit.py path from the command
-            const scriptMatch = cmd.match(/[\w\/.\-]+infer_vit\.py/);
-            const scriptPath = scriptMatch
-              ? scriptMatch[0]
-              : path.join(process.cwd(), "..", "inference", "infer_vit.py");
-            const filePath = pathFromUrl(job.filePath);
-            const outFile = path.join(process.cwd(), "tmp", `${job.id}.json`);
-            await fs.promises.mkdir(path.dirname(outFile), { recursive: true });
-            const args: string[] = [
-              scriptPath,
-              "--input",
-              filePath,
-              "--explain",
-            ]; // request heatmap/artifacts
-            // Prefer env checkpoint; otherwise fallback to local fine-tuned checkpoint if present
-            let ckpt = process.env.MODEL_CHECKPOINT_DIR;
-            if (!ckpt) {
-              const fallbackCkpt = path.join(
-                process.cwd(),
-                "..",
-                "deepfake_vs_real_image_detection",
-                "checkpoint-14282"
-              );
-              if (fs.existsSync(fallbackCkpt)) ckpt = fallbackCkpt;
-            }
-            if (ckpt && !cmd.includes("--checkpoint")) {
-              args.push("--checkpoint", ckpt);
-            }
 
-            const temp = process.env.MODEL_TEMP || "1.0";
-            if (!cmd.includes("--temp")) {
-              args.push("--temp", String(temp));
-            }
+          // Resolve python binary and script path safely (no shell quoting issues)
+          const pythonBin =
+            process.env.PYTHON_BIN ||
+            path.join(process.cwd(), "..", ".venv", "bin", "python");
+          const binExists = fs.existsSync(pythonBin);
+          if (!binExists && !process.env.PYTHON_BIN) {
+            await prisma.detectionJob.update({
+              where: { id: job.id },
+              data: {
+                status: "error",
+                step:
+                  "Python venv missing. Create .venv and install backend requirements.",
+              },
+            });
+            continue;
+          }
 
-            args.push("--out", outFile, "--quiet");
-            const bin = fs.existsSync(pythonBin) ? pythonBin : "python";
-            const child = spawn(bin, args, { shell: false });
+          // Try to locate infer_vit.py path from the command; fallback to repo default.
+          const scriptMatch = cmd?.match(/[\w\/.\-]+infer_vit\.py/);
+          const scriptPath = scriptMatch?.[0]
+            ? scriptMatch[0]
+            : path.join(process.cwd(), "..", "inference", "infer_vit.py");
+          if (!fs.existsSync(scriptPath)) {
+            await prisma.detectionJob.update({
+              where: { id: job.id },
+              data: {
+                status: "error",
+                step: `infer_vit.py not found at: ${scriptPath}`,
+              },
+            });
+            continue;
+          }
+
+          const filePath = pathFromUrl(job.filePath);
+          const outFile = path.join(process.cwd(), "tmp", `${job.id}.json`);
+          await fs.promises.mkdir(path.dirname(outFile), { recursive: true });
+          const args: string[] = [scriptPath, "--input", filePath, "--explain"]; // request heatmap/artifacts
+
+          // Prefer env checkpoint; otherwise fallback to local fine-tuned checkpoint if present
+          let ckpt = process.env.MODEL_CHECKPOINT_DIR;
+          if (!ckpt) {
+            const fallbackCkpt = path.join(
+              process.cwd(),
+              "..",
+              "deepfake_vs_real_image_detection",
+              "checkpoint-14282"
+            );
+            if (fs.existsSync(fallbackCkpt)) ckpt = fallbackCkpt;
+          }
+          if (ckpt && !(cmd || "").includes("--checkpoint")) {
+            args.push("--checkpoint", ckpt);
+          }
+
+          const temp = process.env.MODEL_TEMP || "1.0";
+          if (!(cmd || "").includes("--temp")) {
+            args.push("--temp", String(temp));
+          }
+
+          args.push("--out", outFile, "--quiet");
+          const bin = binExists ? pythonBin : "python";
+          const child = spawn(bin, args, { shell: false });
             let out = "";
             let err = "";
             child.on("error", async (err) => {
@@ -255,7 +277,6 @@ export function ensureWorkerStarted() {
                 data: { status: "complete", step: "Complete", progress: 1 },
               });
             });
-          }
         }
 
         await prisma.detectionJob.update({

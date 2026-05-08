@@ -9,7 +9,6 @@ Outputs matplotlib figures and a CSV summary.
 from __future__ import annotations
 
 import argparse
-import csv
 import subprocess
 import tempfile
 from pathlib import Path
@@ -27,7 +26,7 @@ from tqdm.auto import tqdm
 HERE = Path(__file__).resolve()
 PROJECT_ROOT = HERE.parents[2]
 
-# Default frame transform (ImageNet normalization)
+  
 DEFAULT_TRANSFORM = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
@@ -71,7 +70,7 @@ def default_frame_inference_fn(
     ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
     state = ckpt.get("model_state", ckpt)
 
-    # Build model matching ResNet50FrameClassifier (backbone + classifier)
+      
     backbone = models.resnet50(weights=None)
     in_features = backbone.fc.in_features
     backbone.fc = torch.nn.Identity()
@@ -101,11 +100,11 @@ def default_frame_inference_fn(
     return np.array(probs)
 
 
-# --- Degradation functions ---
+  
 
 
 def degrade_bitrate(input_path: Path, output_path: Path, bitrate_kbps: int = 500) -> Path:
-    """Re-encode with lower bitrate via ffmpeg."""
+     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
@@ -126,7 +125,7 @@ def degrade_resolution(
     width: int = 640,
     height: int = 360,
 ) -> Path:
-    """Downscale to target resolution (e.g., 360p)."""
+     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
@@ -146,7 +145,7 @@ def degrade_jpeg(
     output_path: Path,
     quality: int = 50,
 ) -> Path:
-    """Re-encode frames with JPEG compression (lower quality = more compression)."""
+     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cap = cv2.VideoCapture(str(input_path))
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
@@ -168,7 +167,7 @@ def degrade_jpeg(
 
 
 def degrade_blur(input_path: Path, output_path: Path, kernel_size: int = 15) -> Path:
-    """Apply Gaussian blur to each frame."""
+     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cap = cv2.VideoCapture(str(input_path))
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
@@ -253,7 +252,7 @@ def run_robustness_tests(
             return default_frame_inference_fn(ps)
         inference_fn = _inference
 
-    # Baseline on original videos
+      
     tqdm.write("Running baseline inference...")
     baseline_probs = inference_fn(paths)
     baseline_preds = (baseline_probs >= 0.5).astype(int)
@@ -273,7 +272,7 @@ def run_robustness_tests(
         }
     ]
 
-    # Create degraded variants and evaluate
+      
     with tempfile.TemporaryDirectory(prefix="robustness_", dir=output_dir) as tmpdir:
         tmpdir = Path(tmpdir)
         variants = create_degraded_variants(paths, tmpdir, degradations)
@@ -305,7 +304,7 @@ def run_robustness_tests(
     summary_df.to_csv(csv_path, index=False)
     print(f"Wrote {csv_path}")
 
-    # Plot
+      
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     x = range(len(summary_df))
     labels_plot = summary_df["degradation"].tolist()
@@ -329,10 +328,10 @@ def run_robustness_tests(
     plt.close()
     print(f"Wrote {fig_path}")
 
-    # Delta plot
+      
     fig2, ax = plt.subplots(figsize=(8, 4))
     width = 0.35
-    x_pos = np.arange(len(summary_df) - 1)  # exclude baseline
+    x_pos = np.arange(len(summary_df) - 1)    
     ax.bar(x_pos - width / 2, summary_df.loc[1:, "delta_auc"], width, label="Delta AUC")
     ax.bar(x_pos + width / 2, summary_df.loc[1:, "delta_accuracy"], width, label="Delta Accuracy")
     ax.set_xticks(x_pos)

@@ -66,7 +66,7 @@ const verdictConfig: Record<
   likely_real: {
     label: "Likely Authentic",
     icon: ShieldCheck,
-    color: "#34d399",
+    color: "  
     bg: "rgba(52, 211, 153, 0.12)",
     glow: "0 0 40px rgba(52, 211, 153, 0.25)",
     desc: "No significant signs of manipulation were detected",
@@ -74,7 +74,7 @@ const verdictConfig: Record<
   inconclusive: {
     label: "Inconclusive",
     icon: ShieldQuestion,
-    color: "#fbbf24",
+    color: "  
     bg: "rgba(251, 191, 36, 0.12)",
     glow: "0 0 40px rgba(251, 191, 36, 0.25)",
     desc: "Some anomalies detected — manual review recommended",
@@ -82,7 +82,7 @@ const verdictConfig: Record<
   likely_fake: {
     label: "Likely Manipulated",
     icon: ShieldAlert,
-    color: "#f87171",
+    color: "  
     bg: "rgba(248, 113, 113, 0.12)",
     glow: "0 0 40px rgba(248, 113, 113, 0.25)",
     desc: "High probability of synthetic manipulation detected",
@@ -91,6 +91,7 @@ const verdictConfig: Record<
 
 export default function DetectPage() {
   const [status, setStatus] = useState<UnifiedStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<MediaType | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -113,6 +114,7 @@ export default function DetectPage() {
       setPreviewUrl(file ? URL.createObjectURL(file) : null);
       setMediaType(file ? (file.type.startsWith("video/") ? "video" : "image") : null);
       setStatus("idle");
+      setErrorMessage(null);
       setImageResult(null);
       setVideoResult(null);
       setJobId(null);
@@ -148,6 +150,7 @@ export default function DetectPage() {
       const isVideo = file.type.startsWith("video/");
       setMediaType(isVideo ? "video" : "image");
       setStatus("uploading");
+      setErrorMessage(null);
 
       try {
         if (isVideo) {
@@ -179,7 +182,7 @@ export default function DetectPage() {
             es.close();
             try {
               const s = await fetch(`/api/jobs/${data.jobId}`);
-              const sd = (await s.json()) as { status: string };
+              const sd = (await s.json()) as { status: string; step?: string };
               if (sd.status === "complete") {
                 const r = await fetch(`/api/jobs/${data.jobId}/result`);
                 if (r.ok) {
@@ -188,15 +191,20 @@ export default function DetectPage() {
                   return;
                 }
               }
+              if (sd.step && sd.step !== "Queued" && sd.step !== "Analyzing") {
+                setErrorMessage(sd.step);
+              }
             } catch {}
             setStatus("error");
           });
         }
       } catch (error) {
         setStatus("error");
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        setErrorMessage(msg);
         toast({
           title: "Analysis failed",
-          description: error instanceof Error ? error.message : "Unknown error",
+          description: msg,
           variant: "destructive",
         });
       }
@@ -271,6 +279,7 @@ export default function DetectPage() {
     videoPollStartedAtRef.current = null;
     videoPollConsecutiveFailuresRef.current = 0;
     setStatus("idle");
+    setErrorMessage(null);
     setMediaType(null);
     setUploadedFile(null);
     setPreviewUrl(null);
@@ -335,7 +344,7 @@ export default function DetectPage() {
               <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-red-400" />
               <h2 className="mb-2 text-xl font-semibold">Analysis Failed</h2>
               <p className="text-muted-foreground mb-6">
-                Something went wrong during processing. Please try again.
+                {errorMessage || "Something went wrong during processing. Please try again."}
               </p>
               <Button onClick={handleNewUpload}>Try Again</Button>
             </Card>
@@ -679,8 +688,8 @@ function ResultSection({
                             variant="outline"
                             className="text-xs"
                             style={{
-                              borderColor: f.score >= 0.6 ? "#f87171" : f.score >= 0.3 ? "#fbbf24" : "#34d399",
-                              color: f.score >= 0.6 ? "#f87171" : f.score >= 0.3 ? "#fbbf24" : "#34d399",
+                              borderColor: f.score >= 0.6 ? "  
+                              color: f.score >= 0.6 ? "  
                             }}
                           >
                             {(f.score * 100).toFixed(0)}%
@@ -749,8 +758,8 @@ function ResultSection({
                     <AreaChart data={timelineData}>
                       <defs>
                         <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f87171" stopOpacity={0.7} />
-                          <stop offset="100%" stopColor="#f87171" stopOpacity={0.05} />
+                          <stop offset="0%" stopColor="  
+                          <stop offset="100%" stopColor="  
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -768,15 +777,15 @@ function ResultSection({
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#1a1a2e",
+                          backgroundColor: "  
                           border: "1px solid rgba(255,255,255,0.1)",
                           borderRadius: "8px",
                           fontSize: 12,
                         }}
-                        labelStyle={{ color: "#fff" }}
+                        labelStyle={{ color: "  
                         formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Score"]}
                       />
-                      <Area type="monotone" dataKey="score" stroke="#f87171" fill="url(#sg)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="score" stroke="  
                     </AreaChart>
                   </ResponsiveContainer>
                 </Card>

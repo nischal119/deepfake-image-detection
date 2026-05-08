@@ -1,4 +1,4 @@
-"""Celery task for video inference and persistence."""
+ 
 
 import os
 import sys
@@ -97,7 +97,7 @@ def process_video(self, video_id: str):
         error_msg = str(e)
         print(f"CRITICAL ERROR processing video {video_id}: {error_msg}", file=sys.stderr)
 
-        # Use a direct SQL update to persist failure even if the ORM session is compromised.
+          
         try:
             import psycopg2
             conn = psycopg2.connect(database_url)

@@ -1,4 +1,4 @@
-"""Celery application entry point."""
+
 
 import os
 

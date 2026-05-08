@@ -1,8 +1,8 @@
-## DeepFake Detector – Video Module
+  
 
 This subproject extends the main DeepFake Detector to **video input**, handling raw videos, frame extraction, training, and evaluation of video-based deepfake models.
 
-### Project Structure
+  
 
 - `data/` – High-level data directory
   - `data/raw_videos/` – Original video files (e.g., MP4, AVI)
@@ -19,7 +19,7 @@ This subproject extends the main DeepFake Detector to **video input**, handling 
 
 ---
 
-### Prerequisites
+  
 
 - Python 3.9+ (recommended to match the main project)
 - A working GPU setup with CUDA if you plan to train/video-infer at scale
@@ -27,7 +27,7 @@ This subproject extends the main DeepFake Detector to **video input**, handling 
 
 ---
 
-### Setup
+  
 
 From the repository root:
 
@@ -36,7 +36,7 @@ cd "DeepFake Detector"
 cd projects/deepfake-detector-video
 
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate    
 
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -44,7 +44,7 @@ pip install -r requirements.txt
 
 ---
 
-### Typical Workflow
+  
 
 1. **Organize raw videos**
    - Place input videos into `data/raw_videos/`.
@@ -96,27 +96,27 @@ pip install -r requirements.txt
 
 ---
 
-### Running (High-Level)
+  
 
 Below is a suggested minimal sequence once you have scripts in place:
 
 ```bash
-# 1. Activate environment
+  
 cd "DeepFake Detector"
 cd projects/deepfake-detector-video
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+source .venv/bin/activate    
 
-# 2. Extract frames from raw videos (example script)
+  
 python scripts/extract_frames.py \
   --input-dir data/raw_videos \
   --output-dir data/frames \
   --fps 5
 
-# 3. Train a video model
+  
 python -m src.train.train_video \
   --config configs/base_video.yaml
 
-# 4. Evaluate a checkpoint
+  
 python -m src.eval.evaluate_video \
   --checkpoint-path checkpoints/best.ckpt
 ```
@@ -125,7 +125,7 @@ Adapt these commands to the actual scripts and configs you create.
 
 ---
 
-### Notes
+  
 
 - This directory is intentionally **model-agnostic**: you can plug in different video architectures and datasets.
 - Use the `notebooks/` folder for quick experiments, EDA on labels, and visualization of temporal predictions.

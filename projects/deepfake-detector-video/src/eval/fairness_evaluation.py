@@ -8,9 +8,9 @@ a fairness report with tables and charts.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,22 +25,22 @@ DEMOGRAPHIC_COLS = ["gender", "skin_tone", "age_group"]
 
 @dataclass
 class GroupMetrics:
-    """Per-group performance metrics."""
+     
 
     group_name: str
     n_samples: int
-    n_positive: int  # true label = 1 (fake)
-    n_negative: int  # true label = 0 (real)
+    n_positive: int    
+    n_negative: int    
     accuracy: float
-    fpr: float  # false positive rate: P(pred=1|true=0)
-    fnr: float  # false negative rate: P(pred=0|true=1)
+    fpr: float    
+    fnr: float    
     precision: float
     recall: float
     f1: float
 
 
 def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> GroupMetrics:
-    """Compute metrics for a single group."""
+     
     n = len(y_true)
     n_positive = int((y_true == 1).sum())
     n_negative = int((y_true == 0).sum())
@@ -124,7 +124,7 @@ def compute_per_group_metrics(
     label_col: str = "label",
     pred_col: str = "pred",
 ) -> Dict[str, GroupMetrics]:
-    """Compute metrics for each value of demographic_col."""
+     
     y_true = df[label_col].values
     y_pred = df[pred_col].values
     groups = df[demographic_col].fillna("unknown").astype(str)
@@ -168,7 +168,7 @@ def run_fairness_evaluation(
         metrics_by_group = compute_per_group_metrics(df, col)
         all_results[col] = metrics_by_group
 
-        # Table
+          
         rows = []
         for g, m in metrics_by_group.items():
             rows.append({
@@ -188,7 +188,7 @@ def run_fairness_evaluation(
         table_df.to_csv(csv_path, index=False)
         print(f"Wrote {csv_path}")
 
-        # Chart: accuracy, FPR, FNR by group
+          
         fig, axes = plt.subplots(1, 3, figsize=(12, 4))
         groups = list(metrics_by_group.keys())
         accs = [metrics_by_group[g].accuracy for g in groups]
@@ -216,7 +216,7 @@ def run_fairness_evaluation(
         plt.close()
         print(f"Wrote {fig_path}")
 
-    # Summary CSV (all attributes)
+      
     summary_rows = []
     for col, metrics_by_group in all_results.items():
         for g, m in metrics_by_group.items():
@@ -233,7 +233,7 @@ def run_fairness_evaluation(
     summary_df.to_csv(summary_path, index=False)
     print(f"Wrote {summary_path}")
 
-    # Mitigation suggestions
+      
     suggestions = _generate_mitigation_suggestions(all_results)
     sugg_path = output_dir / "fairness_mitigation_suggestions.txt"
     sugg_path.write_text(suggestions, encoding="utf-8")
@@ -245,7 +245,7 @@ def run_fairness_evaluation(
 def _generate_mitigation_suggestions(
     all_results: Dict[str, Dict[str, GroupMetrics]],
 ) -> str:
-    """Generate mitigation suggestions based on fairness gaps."""
+     
     lines = [
         "=" * 60,
         "FAIRNESS EVALUATION – MITIGATION SUGGESTIONS",

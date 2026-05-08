@@ -1,19 +1,15 @@
-"""SQLAlchemy models for video upload, prediction, and frame results."""
+ 
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
-if TYPE_CHECKING:
-    pass
-
 
 class Video(Base):
-    """Uploaded video file."""
+     
 
     __tablename__ = "videos"
 
@@ -32,7 +28,7 @@ class Video(Base):
 
 
 class Prediction(Base):
-    """Video-level prediction result."""
+     
 
     __tablename__ = "predictions"
 
@@ -49,7 +45,7 @@ class Prediction(Base):
 
 
 class FrameResult(Base):
-    """Per-frame prediction and optional heatmap."""
+     
 
     __tablename__ = "frame_results"
 

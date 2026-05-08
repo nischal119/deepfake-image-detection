@@ -1,4 +1,4 @@
-"""Base model and db session."""
+ 
 
 from typing import Optional
 
@@ -18,19 +18,14 @@ def get_session_factory(engine):
 
 
 def init_db(engine):
-    from app.models import video  # noqa: F401
+    from app.models import video    
     Base.metadata.create_all(bind=engine)
 
 
 def init_db_with_retry(engine, *, retries: int = 30, delay_sec: float = 2.0) -> None:
-    """
-    Create tables once DB is reachable.
-
-    This is mainly for local dev when Postgres may still be starting.
-    """
     from time import sleep
 
-    from app.models import video  # noqa: F401
+    from app.models import video    
 
     last_exc: Optional[Exception] = None
     for _ in range(retries):

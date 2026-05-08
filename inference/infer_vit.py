@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+  
 import argparse
 import base64
 import io
@@ -16,10 +16,10 @@ from transformers import ViTForImageClassification, ViTImageProcessor
 
 
 def load_model(checkpoint_dir: Path):
-    # Prefer a local fine-tuned checkpoint if provided; otherwise fall back to hub id
+      
     if checkpoint_dir and checkpoint_dir.exists():
         model = ViTForImageClassification.from_pretrained(str(checkpoint_dir))
-        # Try to reconstruct processor from config; if missing, default to a common ViT
+          
         try:
             processor = ViTImageProcessor.from_pretrained(str(checkpoint_dir))
         except Exception:
@@ -40,14 +40,14 @@ def predict(
     image = Image.open(image_path).convert("RGB")
     inputs = processor(images=image, return_tensors="pt")
 
-    # temperature scaling to avoid over-confident 0/1
+      
     model.eval()
     inputs = {k: v.requires_grad_(explain) for k, v in inputs.items()}
     outputs = model(**inputs)
     logits = outputs.logits[0] / max(1e-6, float(temperature))
     probs = torch.softmax(logits, dim=-1)
 
-    # Assume label mapping: index 0 -> Real, 1 -> Fake as in training script
+      
     prob_fake = float(probs[1].item())
     prob_real = float(probs[0].item())
 
@@ -66,18 +66,18 @@ def predict(
 
     if explain:
         try:
-            # Simple saliency: grad of fake logit w.r.t input pixels
+              
             model.zero_grad(set_to_none=True)
             one_hot = torch.zeros_like(logits)
-            one_hot[1] = 1.0  # fake class
+            one_hot[1] = 1.0    
             (logits * one_hot).sum().backward()
-            grad = inputs["pixel_values"].grad  # (1,3,H,W)
-            g = grad.abs().sum(dim=1)[0]  # (H,W)
+            grad = inputs["pixel_values"].grad    
+            g = grad.abs().sum(dim=1)[0]    
             g = (g - g.min()) / (g.max() - g.min() + 1e-8)
             g_np = g.detach().cpu().numpy()
-            # Colorize heatmap (red) and overlay
+              
             heat = np.zeros((g_np.shape[0], g_np.shape[1], 3), dtype=np.float32)
-            heat[..., 0] = g_np  # red channel
+            heat[..., 0] = g_np    
             heat_img = (heat * 255).astype(np.uint8)
             heat_pil = Image.fromarray(heat_img).resize(image.size)
             overlay = Image.blend(
@@ -93,9 +93,9 @@ def predict(
             pass
 
         try:
-            # Lightweight artifact metrics
+              
             im_gray = np.asarray(image.convert("L"), dtype=np.float32) / 255.0
-            # High-frequency energy ratio via FFT
+              
             f = np.fft.fftshift(np.fft.fft2(im_gray))
             mag = np.log(np.abs(f) + 1e-6)
             h, w = mag.shape
@@ -104,7 +104,7 @@ def predict(
             center = mag[cy - r : cy + r, cx - r : cx + r].mean()
             outer = (mag.mean() * 4 - center) / 3.0
             hf_ratio = float(max(0.0, min(1.0, outer / (center + 1e-6))))
-            # Edge variance (sharpness proxy)
+              
             vy, vx = np.gradient(im_gray)
             edge_var = float(np.mean(vx**2 + vy**2))
             artifacts = []
@@ -118,7 +118,7 @@ def predict(
         except Exception:
             pass
 
-        # timeline placeholder (single frame)
+          
         result["timeline"] = [{"t": 0.0, "score": prob_fake}]
 
     return result
@@ -147,7 +147,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Reduce noisy logs/warnings to keep stdout clean JSON
+      
     if args.quiet:
         logging.getLogger("transformers").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")

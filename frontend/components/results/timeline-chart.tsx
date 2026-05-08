@@ -40,7 +40,7 @@ export function TimelineChart({ data, xAxisLabel = "Time (s)" }: TimelineChartPr
             }}
             labelStyle={{ color: "oklch(0.985 0 0)" }}
           />
-          <Area type="monotone" dataKey="score" stroke="oklch(0.65 0.2 15)" fill="url(#scoreGradient)" />
+          <Area type="monotone" dataKey="score" stroke="oklch(0.65 0.2 15)" fill="url(  
         </AreaChart>
       </ResponsiveContainer>
     </Card>

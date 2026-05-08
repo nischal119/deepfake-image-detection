@@ -1,52 +1,52 @@
-## Installation
+  
 
-### 1. Clone Repository
+  
 
 ```bash
 git clone <repository-url>
 cd "DeepFake Detector"
 ```
 
-### 2. Backend Setup
+  
 
 ```bash
 cd frontend
 pnpm install
 ```
 
-### 3. Database Setup
+  
 
 ```bash
-#  generate Prisma client
+  
 pnpm prisma:generate
 
-# run migrations
+  
 pnpm prisma:migrate
 
-# Optional: Open Prisma Studio to view database
+  
 pnpm db:studio
 ```
 
-### 4. Python Environment Setup
+  
 
 ```bash
-#navigate to root
+  
 cd ..
 
-# virtual environment
+  
 python -m venv .venv
 
-# Activate virtual environment
-# On macOS/Linux:
+  
+  
 source .venv/bin/activate
-# On Windows:
-# .venv\Scripts\activate
+  
+  
 
-# Install dependencies
+  
 pip install -r requirements.txt
 ```
 
-### 5. Environment Configuration
+  
 
 Create `.env` file in the `frontend` directory. For the video detection flow (Flask backend):
 
@@ -54,9 +54,9 @@ Create `.env` file in the `frontend` directory. For the video detection flow (Fl
 FLASK_VIDEO_API_URL=http://localhost:5000
 ```
 
-## Usage
+  
 
-### Starting the Development Server
+  
 
 ```bash
 cd frontend
@@ -65,9 +65,9 @@ pnpm dev
 
 The application will be available at `http://localhost:3000`
 
-## Technology Stack
+  
 
-### Frontend
+  
 
 - Framework : Next.js 14 with App Router
 - Language : TypeScript
@@ -77,7 +77,7 @@ The application will be available at `http://localhost:3000`
 - Form Validation : React Hook Form with Zod
 - Visualization : Recharts
 
-### Backend
+  
 
 - Runtime : Node.js
 - API : Next.js API Routes (RESTful)
@@ -86,7 +86,7 @@ The application will be available at `http://localhost:3000`
 - File Processing : Native Node.js streams
 - Background Jobs : Custom polling worker
 
-### Machine Learning
+  
 
 - Framework : PyTorch 1.9+
 - Model Architecture : Vision Transformer (ViT)
@@ -96,29 +96,29 @@ The application will be available at `http://localhost:3000`
 - Explainability : Gradient-based saliency mapping
 - Image Processing : Pillow, NumPy
 
-## Prerequisites
+  
 
-### System Requirements
+  
 
 - Node.js 18+ and pnpm
 - Python 3.8+ with pip
 - 4GB RAM minimum (8GB recommended)
 - 2GB disk space for model checkpoints
 
-### Development Tools
+  
 
 - Git for version control
 - SQLite3 (included with most systems)
 - Text editor or IDE (VS Code recommended)
 
-### Uploading an Image
+  
 
 1. Navigate to the detection page
 2. Click the upload area or drag and drop an image
 3. Supported formats: JPEG, PNG, WebP
 4. Maximum file size: 10MB (configurable)
 
-### Viewing Results
+  
 
 After upload, the system will:
 
@@ -128,7 +128,7 @@ After upload, the system will:
 4. Display results with confidence score
 5. Show heatmap overlay and detected artifacts
 
-### Accessing History
+  
 
 Navigate to the history page to view:
 
@@ -137,11 +137,11 @@ Navigate to the history page to view:
 - Quick result summaries
 - Links to detailed reports
 
-## API Documentation
+  
 
-### Endpoints
+  
 
-#### POST /api/predict
+  
 
 Create new detection job
 
@@ -164,7 +164,7 @@ Response :
 }
 ```
 
-#### GET /api/jobs/[jobId]
+  
 
 Get job status and progress
 
@@ -180,7 +180,7 @@ Response :
 }
 ```
 
-#### GET /api/jobs/[jobId]/result
+  
 
 Get detection results (available when status is "complete")
 
@@ -206,7 +206,7 @@ Response :
 }
 ```
 
-#### GET /api/history
+  
 
 List all detection jobs
 
@@ -225,7 +225,7 @@ Response :
 }
 ```
 
-#### GET /api/model
+  
 
 Get model information
 
@@ -241,9 +241,9 @@ Response :
 }
 ```
 
-## Database Schema
+  
 
-### DetectionJob
+  
 
 Stores information about analysis jobs
 
@@ -258,7 +258,7 @@ Stores information about analysis jobs
 - `filePath`: Stored file path
 - `errorMessage`: Error details if failed
 
-### DetectionResult
+  
 
 Stores detection analysis results
 
@@ -277,7 +277,7 @@ Stores detection analysis results
 - `reportUrl`: Full report URL
 - `jobId`: Foreign key to DetectionJob
 
-### JobEvent
+  
 
 Tracks job processing events
 
@@ -288,9 +288,9 @@ Tracks job processing events
 - `progress`: Progress value at time of event
 - `jobId`: Foreign key to DetectionJob
 
-## Model Information
+  
 
-### Vision Transformer Architecture
+  
 
 The detection system uses a fine-tuned Vision Transformer (ViT) model:
 
@@ -301,7 +301,7 @@ The detection system uses a fine-tuned Vision Transformer (ViT) model:
 - Parameters : Approximately 86 million
 - Fine-tuning Dataset : Deepfake vs Real image detection dataset
 
-### Training Details
+  
 
 - Framework : PyTorch with HuggingFace Transformers
 - Optimizer : AdamW
@@ -310,7 +310,7 @@ The detection system uses a fine-tuned Vision Transformer (ViT) model:
 - Class Balancing : Imbalanced-learn sampling
 - Checkpoint : Saved at step 14282 (best validation performance)
 
-### Inference Features
+  
 
 - Temperature Scaling : Calibrates confidence scores (default: 1.5)
 - Threshold-based Verdicts :
@@ -319,29 +319,29 @@ The detection system uses a fine-tuned Vision Transformer (ViT) model:
 - Inconclusive: 0.3 ≤ score ≤ 0.7
 - Explainability : Gradient-based saliency for interpretability
 
-### Code Style
+  
 
 - Frontend : ESLint with Next.js config
 - Python : PEP 8 style guide
 - TypeScript : Strict mode enabled
 - Formatting : Prettier for frontend, Black for Python
 
-## License
+  
 
 This project is proprietary software. All rights reserved.
 
-## Contributors
+  
 
 Bibek Katwal
 
-## Acknowledgments
+  
 
 - Vision Transformer implementation based on HuggingFace Transformers
 - UI components from Radix UI and shadcn/ui
 - Base model: google/vit-base-patch16-224
 - Fine-tuning dataset: Deepfake vs Real image detection
 
-## Support
+  
 
 For issues, questions, or contributions, please contact the development team or open an issue in the project repository.
 
